@@ -1,0 +1,65 @@
+import { CheckCircle2, Command, FolderSync, RefreshCw } from "lucide-react";
+
+import { CommandCenterPanel } from "../components/CommandCenterPanel";
+import { WorkspaceHeader } from "../components/WorkspaceHeader";
+import type { CommandCenterOverview, RuntimeVerification } from "../types/api";
+
+interface CommandCenterPageProps {
+  overview: CommandCenterOverview | null;
+  verification: RuntimeVerification | null;
+  error: string | null;
+  isLoading: boolean;
+  isRefreshingMcp: boolean;
+  isVerifying: boolean;
+  onRefresh: () => Promise<void>;
+  onRefreshMcp: () => Promise<void>;
+  onVerify: () => Promise<void>;
+}
+
+export function CommandCenterPage({
+  overview,
+  verification,
+  error,
+  isLoading,
+  isRefreshingMcp,
+  isVerifying,
+  onRefresh,
+  onRefreshMcp,
+  onVerify,
+}: CommandCenterPageProps) {
+  return (
+    <div className="space-y-6">
+      <WorkspaceHeader
+        eyebrow="Command Center"
+        title="Control Center"
+        subtitle="Browser-native inspection for command coverage, MCP routing, tool inventory, and the verification flow that used to live in terminal-first operations."
+        icon={Command}
+        actions={
+          <>
+            <button type="button" onClick={() => void onRefresh()} className="rounded p-2 text-text-muted transition hover:bg-surface-container-low hover:text-primary">
+              <RefreshCw className="h-5 w-5" />
+            </button>
+            <button type="button" onClick={() => void onVerify()} className="rounded p-2 text-text-muted transition hover:bg-surface-container-low hover:text-primary">
+              <FolderSync className="h-5 w-5" />
+            </button>
+            <div className="rounded p-2 text-emerald-600">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+          </>
+        }
+      />
+
+      <CommandCenterPanel
+        overview={overview}
+        verification={verification}
+        error={error}
+        isLoading={isLoading}
+        isRefreshingMcp={isRefreshingMcp}
+        isVerifying={isVerifying}
+        onRefresh={onRefresh}
+        onRefreshMcp={onRefreshMcp}
+        onVerify={onVerify}
+      />
+    </div>
+  );
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "input_task": "Build a board-aware demo script that uses mission findings before coding.",
+    "expected_tools": [
+      "post_finding",
+      "run_test_in_sandbox"
+    ],
+    "validation_script": "assert \"Mission successful. Final approved output:\" in result\nassert \"board-aware\" in result"
+  },
+  {
+    "input_task": "Write a uZephyr skill that merges files recursively and returns the final Python source for review.",
+    "expected_tools": [
+      "write_skill",
+      "run_test_in_sandbox"
+    ],
+    "validation_script": "assert \"Mission successful. Final approved output:\" in result\nassert \"def \" in result"
+  },
+  {
+    "input_task": "Refine a script until the reviewer checklist passes with docstrings, error handling, and sandbox verification.",
+    "expected_tools": [
+      "update_mission_board",
+      "run_test_in_sandbox"
+    ],
+    "validation_script": "assert \"Mission successful. Final approved output:\" in result\nassert \"PASS\" not in result"
+  },
+  {
+    "input_task": "Stage a safe update to core/startup_guidance.py using propose_core_change and return the staged Python source for review.",
+    "expected_tools": [
+      "propose_core_change",
+      "run_test_in_sandbox"
+    ],
+    "validation_script": "assert \"Mission successful. Final approved output:\" in result\nassert \"```python\" in result"
+  },
+  {
+    "input_task": "Prepare a staged config.py change for review, but do not apply it to the live file yet.",
+    "expected_tools": [
+      "propose_core_change",
+      "run_test_in_sandbox"
+    ],
+    "validation_script": "assert \"Mission successful. Final approved output:\" in result\nassert \"apply_core_change\" not in used_tools"
+  }
+]

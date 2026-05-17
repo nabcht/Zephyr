@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trust &amp; Privacy Posture - μZephyr</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "background": "#fcf8f8",
+                    "outline": "#75777a",
+                    "on-tertiary-fixed": "#201b17",
+                    "tertiary-fixed-dim": "#cfc5be",
+                    "on-tertiary-fixed-variant": "#4c4641",
+                    "on-secondary-container": "#6e0b01",
+                    "secondary-container": "#fc745c",
+                    "primary-fixed-dim": "#c6c6c9",
+                    "on-tertiary-container": "#8b837d",
+                    "primary": "#000101",
+                    "on-tertiary": "#ffffff",
+                    "on-background": "#1c1b1b",
+                    "surface-dim": "#ddd9d9",
+                    "on-primary-fixed-variant": "#454749",
+                    "surface-tint": "#5d5e61",
+                    "surface-bright": "#fcf8f8",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#ebe0da",
+                    "on-error": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-container": "#201b17",
+                    "surface-container-high": "#ebe7e7",
+                    "inverse-surface": "#313030",
+                    "surface-container": "#f1eded",
+                    "tertiary": "#010100",
+                    "action-red": "#B8422E",
+                    "inverse-primary": "#c6c6c9",
+                    "on-error-container": "#93000a",
+                    "primary-fixed": "#e2e2e5",
+                    "primary-container": "#1a1c1e",
+                    "secondary": "#a93724",
+                    "surface-container-low": "#f6f3f2",
+                    "border-subtle": "#E2E0DD",
+                    "on-secondary-fixed-variant": "#881f0f",
+                    "on-surface-variant": "#44474a",
+                    "surface-dark": "#1A1C1E",
+                    "on-primary-fixed": "#1a1c1e",
+                    "workspace-bg": "#F7F5F2",
+                    "outline-variant": "#c5c6ca",
+                    "inverse-on-surface": "#f4f0ef",
+                    "surface-variant": "#e5e2e1",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed-dim": "#ffb4a6",
+                    "on-primary-container": "#838486",
+                    "on-surface": "#1c1b1b",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#ffdad3",
+                    "on-secondary-fixed": "#3f0300",
+                    "surface": "#fcf8f8",
+                    "surface-container-highest": "#e5e2e1",
+                    "text-muted": "#60646C",
+                    "on-secondary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "space-xl": "32px",
+                    "unit": "4px",
+                    "space-md": "16px",
+                    "space-sm": "8px",
+                    "header-height": "64px",
+                    "space-lg": "24px",
+                    "sidebar-width": "260px",
+                    "space-xs": "4px"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "label-md": ["JetBrains Mono"],
+                    "headline-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-sm": ["JetBrains Mono"],
+                    "body-lg": ["Inter"],
+                    "headline-sm": ["Inter"],
+                    "headline-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-workspace-bg text-on-background font-body-md min-h-screen flex flex-col md:flex-row antialiased selection:bg-secondary-fixed-dim selection:text-on-secondary-fixed">
+<!-- SideNavBar (Desktop) -->
+<nav class="hidden md:flex flex-col h-screen w-sidebar-width fixed left-0 top-0 bg-surface-container border-r border-border-subtle py-space-md px-space-sm gap-space-md z-40">
+<div class="flex items-center px-space-sm pb-space-md border-b border-border-subtle">
+<span class="font-headline-sm text-headline-sm font-bold text-primary">μZephyr</span>
+</div>
+<div class="px-space-sm mb-space-sm">
+<div class="font-label-md text-label-md text-on-surface">Runtime Snapshot</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant mt-1">Live Environment</div>
+</div>
+<ul class="flex-1 flex flex-col gap-1">
+<li>
+<a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer duration-200 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-label-md text-label-md">Provider</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer duration-200 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="manage_search">manage_search</span>
+<span class="font-label-md text-label-md">Search</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer duration-200 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="memory">memory</span>
+<span class="font-label-md text-label-md">Model</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all cursor-pointer duration-200 active:scale-98" href="#">
+<span class="material-symbols-outlined" data-icon="fingerprint">fingerprint</span>
+<span class="font-label-md text-label-md">Session</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto flex flex-col gap-2 pt-space-md border-t border-border-subtle">
+<button class="w-full py-2 px-space-sm bg-primary-container text-on-primary rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity">
+                Refresh Snapshot
+            </button>
+<a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-label-md text-label-md">Docs</span>
+</a>
+<a class="flex items-center gap-space-sm px-space-sm py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+<span class="font-label-md text-label-md">Support</span>
+</a>
+</div>
+</nav>
+<!-- Main Workspace -->
+<main class="flex-1 md:ml-[260px] min-h-screen flex flex-col pb-24 md:pb-16 relative">
+<!-- TopNavBar (Mobile/Universal Header) -->
+<header class="flex justify-between items-center h-header-height px-space-lg w-full sticky top-0 z-50 bg-surface border-b border-border-subtle md:border-none md:bg-transparent md:backdrop-blur-none bg-opacity-95 backdrop-blur-sm">
+<div class="flex items-center gap-space-sm">
+<span class="md:hidden font-headline-md text-headline-md font-bold text-primary">μZephyr</span>
+<!-- Desktop Top Navigation Links -->
+<nav class="hidden md:flex gap-space-lg ml-space-xl">
+<a class="text-on-surface-variant font-medium hover:text-secondary transition-colors font-body-md text-body-md py-4" href="#">Chat</a>
+<a class="text-on-surface-variant font-medium hover:text-secondary transition-colors font-body-md text-body-md py-4" href="#">Command Center</a>
+<a class="text-primary font-bold border-b-2 border-secondary font-body-md text-body-md py-4" href="#">Posture</a>
+<a class="text-on-surface-variant font-medium hover:text-secondary transition-colors font-body-md text-body-md py-4" href="#">Activity</a>
+</nav>
+</div>
+<div class="flex items-center gap-space-md">
+<button class="hidden md:inline-block px-4 py-1.5 bg-primary-container text-on-primary rounded font-label-md text-label-md hover:bg-primary transition-colors">
+                    Verify Runtime
+                </button>
+<button class="hidden md:inline-block px-4 py-1.5 border border-border-subtle text-primary rounded font-label-md text-label-md hover:bg-surface-container-low transition-colors">
+                    Reload Tools
+                </button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="p-space-lg max-w-6xl mx-auto w-full flex-1">
+<!-- TopAppBar Contextual Header -->
+<div class="w-full rounded-xl mt-space-md bg-workspace-bg border border-border-subtle flex justify-between items-center px-space-md py-space-sm mb-space-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary" data-icon="security">security</span>
+<h1 class="font-headline-sm text-headline-sm text-primary">Trust &amp; Privacy Posture</h1>
+</div>
+<div class="flex gap-space-sm">
+<button class="p-1 rounded text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="refresh">refresh</span>
+</button>
+<button class="p-1 rounded text-on-surface-variant hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="cloud_sync">cloud_sync</span>
+</button>
+<button class="p-1 rounded text-secondary hover:bg-surface-container-low transition-colors active:scale-95">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+</button>
+</div>
+</div>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-space-md">
+<!-- Trust Signals (Primary Focus - Dark Container) -->
+<div class="lg:col-span-2 bg-primary-container text-on-primary rounded-xl p-space-lg shadow-sm flex flex-col gap-space-md border border-primary-container relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+<span class="material-symbols-outlined text-[120px]" data-icon="shield_lock">shield_lock</span>
+</div>
+<div class="flex justify-between items-start relative z-10">
+<div>
+<h2 class="font-headline-sm text-headline-sm mb-1">Runtime Trust Signals</h2>
+<p class="font-body-sm text-body-sm text-primary-fixed-dim">Continuous validation of execution environment.</p>
+</div>
+<span class="px-2 py-1 bg-[#1c4d29] text-[#7bf1a8] rounded font-label-sm text-label-sm border border-[#2b733d]">SECURE ENCLAVE</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md mt-space-sm relative z-10">
+<div class="bg-on-background p-space-md rounded-lg border border-surface-tint">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md text-primary-fixed-dim">Boot Integrity</span>
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+</div>
+<div class="font-body-md text-body-md text-on-primary">Verified via TPM 2.0</div>
+<div class="font-label-sm text-label-sm text-text-muted mt-2">Hash: 0x8F9B...4A12</div>
+</div>
+<div class="bg-on-background p-space-md rounded-lg border border-surface-tint">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md text-primary-fixed-dim">Memory Encryption</span>
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+</div>
+<div class="font-body-md text-body-md text-on-primary">Active (SME/SEV)</div>
+<div class="font-label-sm text-label-sm text-text-muted mt-2">Key Managed Internally</div>
+</div>
+<div class="bg-on-background p-space-md rounded-lg border border-surface-tint">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md text-primary-fixed-dim">Network Egress</span>
+<span class="material-symbols-outlined text-secondary-container" data-icon="warning">warning</span>
+</div>
+<div class="font-body-md text-body-md text-on-primary">Restricted Mode</div>
+<div class="font-label-sm text-label-sm text-secondary-container mt-2">2 Remote Endpoints Allowed</div>
+</div>
+<div class="bg-on-background p-space-md rounded-lg border border-surface-tint">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md text-primary-fixed-dim">Execution Anomaly</span>
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle">check_circle</span>
+</div>
+<div class="font-body-md text-body-md text-on-primary">0 Incidents Detected</div>
+<div class="font-label-sm text-label-sm text-text-muted mt-2">Last 72 Hours</div>
+</div>
+</div>
+</div>
+<!-- Privacy Posture (Clear, Minimal Card) -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-xl p-space-lg flex flex-col gap-space-md">
+<div class="flex items-center gap-space-sm mb-2">
+<span class="material-symbols-outlined text-primary" data-icon="policy">policy</span>
+<h2 class="font-headline-sm text-headline-sm text-primary">Privacy Posture</h2>
+</div>
+<div class="space-y-4">
+<div class="border-b border-border-subtle pb-3">
+<div class="font-label-sm text-label-sm text-on-surface-variant mb-1">INFERENCE BACKEND</div>
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md">Local Compute</span>
+<span class="px-2 py-0.5 bg-surface-container-high text-primary rounded text-xs font-label-md">ACTIVE</span>
+</div>
+</div>
+<div class="border-b border-border-subtle pb-3">
+<div class="font-label-sm text-label-sm text-on-surface-variant mb-1">REMOTE CAPABILITIES</div>
+<div class="flex items-center justify-between">
+<span class="font-body-md text-body-md text-text-muted">Cloud Fallback</span>
+<span class="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded text-xs font-label-md">DISABLED</span>
+</div>
+</div>
+<div class="pt-2">
+<div class="font-label-sm text-label-sm text-on-surface-variant mb-2">DATA RETENTION</div>
+<div class="w-full bg-surface-container-high rounded-full h-2 mb-1 overflow-hidden">
+<div class="bg-secondary h-2 rounded-full" style="width: 15%"></div>
+</div>
+<div class="flex justify-between font-label-sm text-label-sm text-text-muted">
+<span>Volatile</span>
+<span>15% Durable</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Durable Memory Facts -->
+<div class="lg:col-span-3 bg-surface-container-lowest border border-border-subtle rounded-xl p-space-lg">
+<div class="flex items-center gap-space-sm mb-space-md border-b border-border-subtle pb-space-sm">
+<span class="material-symbols-outlined text-primary" data-icon="database">database</span>
+<h2 class="font-headline-sm text-headline-sm text-primary">Durable Memory Facts</h2>
+<span class="ml-auto font-label-sm text-label-sm text-on-surface-variant bg-surface-container px-2 py-1 rounded">TRANSPARENCY REPORT</span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="font-label-sm text-label-sm text-on-surface-variant border-b border-border-subtle">
+<th class="py-2 px-4 font-medium">Fact Entity</th>
+<th class="py-2 px-4 font-medium">Source</th>
+<th class="py-2 px-4 font-medium">Retention Policy</th>
+<th class="py-2 px-4 font-medium">Action</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm">
+<tr class="border-b border-border-subtle hover:bg-surface-container-low transition-colors">
+<td class="py-3 px-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-text-muted" data-icon="person">person</span>
+                                        User Preferences
+                                    </td>
+<td class="py-3 px-4 font-label-sm">Explicit Opt-In</td>
+<td class="py-3 px-4">Until Revoked</td>
+<td class="py-3 px-4">
+<button class="text-secondary hover:text-action-red font-label-sm text-label-sm transition-colors">Forget</button>
+</td>
+</tr>
+<tr class="border-b border-border-subtle hover:bg-surface-container-low transition-colors">
+<td class="py-3 px-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-text-muted" data-icon="history">history</span>
+                                        Session Context
+                                    </td>
+<td class="py-3 px-4 font-label-sm">Inference Trace</td>
+<td class="py-3 px-4">24 Hours (Rolling)</td>
+<td class="py-3 px-4">
+<button class="text-secondary hover:text-action-red font-label-sm text-label-sm transition-colors">Purge</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 px-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-text-muted" data-icon="api">api</span>
+                                        Tool Credentials
+                                    </td>
+<td class="py-3 px-4 font-label-sm">Secure Vault</td>
+<td class="py-3 px-4 text-secondary-container">Session Only</td>
+<td class="py-3 px-4">
+<button class="text-text-muted cursor-not-allowed font-label-sm text-label-sm" disabled="">Cleared</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full fixed bottom-0 left-0 flex justify-between items-center px-space-lg py-space-xs z-40 bg-surface border-t border-border-subtle">
+<span class="font-label-md text-label-md font-bold text-on-surface-variant">μZephyr v1.0.4 | SYSTEM_READY</span>
+<div class="flex gap-space-md">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary transition-colors" href="#">Terms</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary transition-colors" href="#">Privacy</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-secondary transition-colors" href="#">API Docs</a>
+</div>
+</footer>
+</body></html>

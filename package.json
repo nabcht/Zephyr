@@ -1,0 +1,18 @@
+{
+  "name": "uzephyr-hybrid",
+  "private": true,
+  "scripts": {
+    "dev:hybrid": "concurrently -k -n api,web -c magenta,cyan \"python -m backend.dev_server\" \"npm --prefix frontend run dev\"",
+    "dev:hybrid:stable": "concurrently -k -n api,web -c magenta,cyan \"python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000\" \"npm --prefix frontend run dev\"",
+    "verify:command-center": "python verify_command_center_inventory.py",
+    "verify:hybrid": "npm run build:frontend && python verify_hybrid_workflow.py",
+    "build:frontend": "npm --prefix frontend run build",
+    "install:frontend": "npm --prefix frontend install"
+  },
+  "dependencies": {
+    "@google/design.md": "^0.1.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -1,0 +1,45 @@
+# Environments and secrets
+.env
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editor and OS files
+.vscode/
+.claude/
+Thumbs.db
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+coverage/
+node_modules/
+*.tsbuildinfo
+
+# Runtime data
+data/zephyr.db
+data/vector_store/
+data/keyword_index/
+logs/
+backups/
+temp_core/
+
+# Downloaded model assets
+LLM/gemma-4/
+LLM/vector-models/
+
+# Local knowledge and generated truth
+knowledge/memories.md
+knowledge/brain/timeline.log
+knowledge/brain/truth.md
+knowledge/brain/entities/*
+!knowledge/brain/entities/.gitkeep

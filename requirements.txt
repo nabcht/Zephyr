@@ -1,0 +1,40 @@
+# μZephyr (Zephyr Micro) - Dependencies
+# Core
+httpx>=0.27.0
+pydantic>=2.6.0
+python-dotenv>=1.0.1
+mcp>=1.27.0
+
+# LLM
+openai>=1.12.0
+llama-cpp-python>=0.3.2
+
+# Async DB
+aiosqlite>=0.20.0
+
+# Memory / RAG
+rank-bm25>=0.2.2
+
+# CLI / UI
+rich>=13.7.0
+prompt-toolkit>=3.0.43
+
+# Web search
+duckduckgo-search>=6.1.0
+
+# Utilities
+aiofiles>=23.2.1
+
+# ── Optimised Local Search ────────────────────────────────────────────────────
+# Semantic embeddings (CPU-friendly, ~80 MB model)
+sentence-transformers>=2.6.0
+# Local vector store
+chromadb>=0.5.0
+# Fast keyword index
+whoosh>=2.7.4
+# Filesystem watcher for incremental local search updates
+watchdog>=4.0.0
+# PDF to Markdown
+pymupdf4llm>=0.0.5
+# Excel parsing
+openpyxl>=3.1.2
