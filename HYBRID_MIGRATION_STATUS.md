@@ -7,7 +7,7 @@ Updated: 2026-05-17
 - Extracted the shared runtime lifecycle into `core/app_runtime.py` and moved shared chat, mission, and CLI command orchestration into `core/chat_service.py`, `core/mission_service.py`, and `core/cli_commands.py`.
 - Kept the CLI and hybrid web runtime on the same shared backend services instead of duplicating initialization and runtime state handling.
 - Added the FastAPI backend under `backend/` with routes and services for system status, runtime actions, sessions, chat, mission execution, and command-center inspection.
-- Added the React + Vite frontend under `frontend/` with the current hash-routed control room, typed API hooks, session restore/history loading, and SSE chat, mission, and runtime-action streaming.
+- Added the React + Vite frontend under `frontend/` with the router-driven control room, typed API hooks, session restore/history loading, and SSE chat, mission, and runtime-action streaming.
 - Migrated runtime actions into the web UI, including refresh, reload tools, prepare runtime, session creation, and streamed chat.
 - Added a command-center web surface for former CLI-only inspection commands, including equivalents for `/skills`, `/memory`, `/mcp`, `/verify`, `/help`, and `/mission`.
 - Added a root hybrid dev workflow so the FastAPI backend and Vite frontend can run together during development.
@@ -39,6 +39,8 @@ Updated: 2026-05-17
 - Started coordinated background inference warm-up during shared runtime initialization and reused the same warm-up task from explicit prepare flows so fresh runtime bootstrap no longer leaves provider warm-up entirely on the first live turn.
 - Extended the hybrid regression to assert `/api/system/status` reports `Warming` while background provider warm-up is in flight and `Ready` after the shared warm-up task settles.
 - Added provider-stage inference timing metrics to the backend system snapshot and React activity view so operator status now shows the latest warm-up time and last live provider-call time separately.
+- Populated the remaining shell chrome navigation pages so `Docs`, `Support`, `Settings`, `Profile`, `Terms`, `Privacy`, and `API Docs` now render inside the control room with operator-facing content instead of acting as placeholders.
+- Replaced hash-based view switching with router-managed browser paths so the control room now resolves as real URLs such as `/chat`, `/command-center`, `/posture`, and `/activity`.
 - Added an immediate cold-path chat-stream initialization snapshot so streamed chat shows progress before shared runtime initialization finishes.
 - Extended the hybrid regression to fail if a fresh `/api/chat/stream` request stops emitting the expected initialization snapshot first.
 - Measured the real localhost chat-stream path against uvicorn and confirmed the first snapshot now arrives quickly over HTTP, not just through the in-process ASGI transport.
@@ -53,7 +55,7 @@ Updated: 2026-05-17
 - Shared runtime layer: `core/app_runtime.py` initializes memory, tools, LLM routing, and background search/inference warm-up once for both the CLI and backend callers.
 - Shared runtime layer: `core/app_runtime.py` initializes memory, tools, LLM routing, and background search/inference warm-up once for both the CLI and backend callers, while deferring the heavy initial cached-index refresh until after the first completed turn.
 - Backend bridge: FastAPI under `backend/` exposes system, runtime, session, chat, mission, and command-center routes over that shared runtime.
-- Primary web interface: React + Vite under `frontend/`, with hash-routed `#chat`, `#command-center`, `#posture`, and `#activity` views.
+- Primary web interface: React + Vite under `frontend/`, with router-managed `/chat`, `/command-center`, `/posture`, and `/activity` paths.
 - Fallback interface: `main.py` still provides the terminal CLI, backed by the same chat, mission, memory, and runtime services.
 
 ## Current Control Room Surface
@@ -63,6 +65,7 @@ Updated: 2026-05-17
 - Command Center: command map, tool catalog, typed MCP overview with discovery freshness, degraded reasons, recent MCP execution results, MCP-only refresh, durable-memory visibility, and browser-side `/verify` output.
 - Posture: runtime trust signals, privacy posture, and durable-memory transparency.
 - Activity: execution mode banner, startup guidance, separate inference/search readiness, provider-stage timing metrics, live reload/prepare activity, and runtime preparation output.
+- Shell pages: docs, support, settings, profile, terms, privacy, and API docs now live inside the same router-managed shell as the main operator views.
 
 ## Current API Surface
 
@@ -223,7 +226,7 @@ Exit criteria:
 - [x] Confirmed `npm run verify:hybrid` still passes with the primary watcher-driven launcher after excluding per-skill script edits from backend process reload.
 - [x] Removed the retired legacy web surface so the hybrid web app is the only browser UI and the CLI is the only fallback path.
 - [x] Added browser-mediated approval for sensitive tools when safety confirmation is enabled in the hybrid frontend.
-- [x] Reorganized the React control room into the current Chat, Command Center, Posture, and Activity views behind hash-based navigation.
+- [x] Reorganized the React control room into the current Chat, Command Center, Posture, and Activity views behind router-managed navigation.
 - [x] Fixed the chat textarea input and placeholder contrast in the hybrid frontend.
 - [x] Updated CLI `/prepare` and the web `Prepare runtime` flow to wait for deferred search warm-up before returning the final status snapshot.
 - [x] Confirmed the focused prepare probe now returns `Ready (background re-index)` instead of `Warming (search runtime loading in background)`.
@@ -520,5 +523,4 @@ Result:
 - A failed MCP discovery refresh can continue showing the last successful cached inventory while also surfacing the current error state; operators should treat cached tool visibility as historical inventory, not proof that the server is currently healthy.
 - The watcher-driven backend now reloads only for changes under `backend/`, `core/`, `skills/`, and the root `config.py`; per-skill script edits under `skills/*/scripts/*.py` still stay on the explicit `Reload tools` path instead of bouncing the API.
 - `Verify runtime` now completes in the web UI, but mission evals are intentionally bounded to a 45-second timeout there; the full regression pass still belongs in the CLI `/verify` workflow.
-- The current control room uses hash-based view switching (`#chat`, `#command-center`, `#posture`, `#activity`) rather than a router-driven URL structure.
-- Several shell chrome buttons in the React frame are still placeholders and do not yet navigate anywhere (`Docs`, `Support`, `Settings`, `Profile`, `Terms`, `Privacy`, `API Docs`).
+- Router-managed control-room URLs now depend on SPA fallback rewrites from the frontend host; the Vite dev and preview servers handle this automatically, but custom reverse proxies must rewrite unknown UI paths to the frontend index.

@@ -7,7 +7,7 @@ This document describes the current React control room shipped in `frontend/` an
 - Launch with `run.bat` or `run-hybrid.bat`.
 - Backend default address: `http://127.0.0.1:8000`
 - Frontend default address: `http://127.0.0.1:5173`
-- View switching is hash-based: `#chat`, `#command-center`, `#posture`, `#activity`
+- Primary control-room paths: `/chat`, `/command-center`, `/posture`, `/activity`
 
 ## Global Shell
 
@@ -21,7 +21,7 @@ The shared shell in `frontend/src/components/AppShell.tsx` provides:
 Current shell caveats:
 
 - The top action buttons are desktop-first and hidden on smaller breakpoints.
-- `Docs`, `Support`, `Settings`, `Profile`, `Terms`, `Privacy`, and `API Docs` are presentational controls right now; they do not navigate anywhere yet.
+- Router-managed control-room paths depend on SPA fallback rewrites from the frontend host; the Vite dev server handles this automatically.
 
 ## View Map
 

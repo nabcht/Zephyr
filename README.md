@@ -231,4 +231,4 @@ Some files and directories are created locally at runtime and are intentionally 
 
 - Archive and MCP integrations are optional and stay disabled unless configured.
 - Sandbox verification can use Docker when available, or a process-isolated fallback when Docker is unavailable.
-- The web interface uses hash-based view switching rather than router-managed URLs.
+- The web interface uses router-managed browser paths such as `/chat` and `/command-center`.

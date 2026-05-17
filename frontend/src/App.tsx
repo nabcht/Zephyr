@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { AppShell, type AppView } from "./components/AppShell";
 import { useChatSession } from "./hooks/useChatSession";
@@ -7,31 +8,78 @@ import { useSystemStatus } from "./hooks/useSystemStatus";
 import { ActivityPage } from "./views/ActivityPage";
 import { ChatPage } from "./views/ChatPage";
 import { CommandCenterPage } from "./views/CommandCenterPage";
+import {
+  ApiDocsPage,
+  DocsPage,
+  PrivacyPage,
+  ProfilePage,
+  SettingsPage,
+  SupportPage,
+  TermsPage,
+} from "./views/NavigationPages";
 import { PosturePage } from "./views/PosturePage";
 
-function resolveViewFromHash(hash: string): AppView {
-  switch (hash.replace(/^#/, "")) {
-    case "command-center":
+function normalizePathname(pathname: string): string {
+  if (!pathname || pathname === "/") {
+    return "/";
+  }
+
+  return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+}
+
+function resolveViewFromPath(pathname: string): AppView | null {
+  switch (normalizePathname(pathname)) {
+    case "/chat":
+      return "chat";
+    case "/docs":
+      return "docs";
+    case "/support":
+      return "support";
+    case "/command-center":
       return "command-center";
-    case "posture":
+    case "/settings":
+      return "settings";
+    case "/profile":
+      return "profile";
+    case "/posture":
       return "posture";
-    case "activity":
+    case "/terms":
+      return "terms";
+    case "/privacy":
+      return "privacy";
+    case "/api-docs":
+      return "api-docs";
+    case "/activity":
       return "activity";
     default:
-      return "chat";
+      return null;
   }
 }
 
-function hashForView(view: AppView): string {
+function pathForView(view: AppView): string {
   switch (view) {
+    case "chat":
+      return "/chat";
+    case "docs":
+      return "/docs";
+    case "support":
+      return "/support";
     case "command-center":
-      return "#command-center";
+      return "/command-center";
+    case "settings":
+      return "/settings";
+    case "profile":
+      return "/profile";
     case "posture":
-      return "#posture";
+      return "/posture";
+    case "terms":
+      return "/terms";
+    case "privacy":
+      return "/privacy";
+    case "api-docs":
+      return "/api-docs";
     case "activity":
-      return "#activity";
-    default:
-      return "#chat";
+      return "/activity";
   }
 }
 
@@ -39,13 +87,8 @@ function hashForView(view: AppView): string {
  * Design reference: frontend/design.md -> Overview, Colors.
  */
 export default function App() {
-  const [activeView, setActiveView] = useState<AppView>(() => {
-    if (typeof window === "undefined") {
-      return "chat";
-    }
-
-    return resolveViewFromHash(window.location.hash);
-  });
+  const location = useLocation();
+  const navigate = useNavigate();
   const {
     status,
     error: statusError,
@@ -81,23 +124,21 @@ export default function App() {
     runMission,
   } = useChatSession(status?.safety_confirmation_required ?? false);
 
+  const resolvedView = resolveViewFromPath(location.pathname);
+  const activeView = resolvedView ?? "chat";
+
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return undefined;
+    const normalized = normalizePathname(location.pathname);
+
+    if (normalized === "/") {
+      navigate(pathForView("chat"), { replace: true });
+      return;
     }
 
-    const syncViewFromHash = () => {
-      setActiveView(resolveViewFromHash(window.location.hash));
-    };
-
-    if (!window.location.hash) {
-      window.history.replaceState(null, "", hashForView("chat"));
+    if (resolvedView === null) {
+      navigate(pathForView("chat"), { replace: true });
     }
-
-    syncViewFromHash();
-    window.addEventListener("hashchange", syncViewFromHash);
-    return () => window.removeEventListener("hashchange", syncViewFromHash);
-  }, []);
+  }, [location.pathname, navigate, resolvedView]);
 
   async function handleRefreshSnapshot(): Promise<void> {
     await Promise.all([refresh(), refreshCommandCenter()]);
@@ -119,15 +160,9 @@ export default function App() {
   }
 
   function handleViewChange(view: AppView): void {
-    setActiveView(view);
-
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const nextHash = hashForView(view);
-    if (window.location.hash !== nextHash) {
-      window.history.pushState(null, "", nextHash);
+    const nextPath = pathForView(view);
+    if (normalizePathname(location.pathname) !== nextPath) {
+      navigate(nextPath);
     }
   }
 
@@ -155,6 +190,12 @@ export default function App() {
 
   let pageContent: JSX.Element;
   switch (activeView) {
+    case "docs":
+      pageContent = <DocsPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
+    case "support":
+      pageContent = <SupportPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
     case "command-center":
       pageContent = (
         <CommandCenterPage
@@ -170,6 +211,12 @@ export default function App() {
         />
       );
       break;
+    case "settings":
+      pageContent = <SettingsPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
+    case "profile":
+      pageContent = <ProfilePage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
     case "posture":
       pageContent = (
         <PosturePage
@@ -178,6 +225,15 @@ export default function App() {
           memoryFacts={overview?.memory.facts ?? []}
         />
       );
+      break;
+    case "terms":
+      pageContent = <TermsPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
+    case "privacy":
+      pageContent = <PrivacyPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
+    case "api-docs":
+      pageContent = <ApiDocsPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
       break;
     case "activity":
       pageContent = (

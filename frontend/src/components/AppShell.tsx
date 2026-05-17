@@ -19,7 +19,18 @@ import type { PropsWithChildren } from "react";
 
 import type { SystemStatus } from "../types/api";
 
-export type AppView = "chat" | "command-center" | "posture" | "activity";
+export type AppView =
+  | "chat"
+  | "command-center"
+  | "posture"
+  | "activity"
+  | "docs"
+  | "support"
+  | "settings"
+  | "profile"
+  | "terms"
+  | "privacy"
+  | "api-docs";
 
 interface AppShellProps extends PropsWithChildren {
   activeView: AppView;
@@ -93,6 +104,30 @@ function SnapshotRow({ item }: { item: SnapshotItem }) {
       </div>
     </article>
   );
+}
+
+function chromeButtonClasses(active: boolean): string {
+  if (active) {
+    return "flex w-full items-center gap-space-sm rounded-lg bg-surface-container-high px-space-sm py-space-sm text-sm font-medium text-primary";
+  }
+
+  return "flex w-full items-center gap-space-sm rounded-lg px-space-sm py-space-sm text-sm text-text-muted transition hover:bg-surface-container-high hover:text-primary";
+}
+
+function iconButtonClasses(active: boolean): string {
+  if (active) {
+    return "inline-flex h-10 w-10 items-center justify-center rounded-lg bg-surface-container-high text-primary";
+  }
+
+  return "inline-flex h-10 w-10 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-container-low hover:text-primary";
+}
+
+function footerButtonClasses(active: boolean): string {
+  if (active) {
+    return "font-medium text-primary";
+  }
+
+  return "transition hover:text-secondary";
 }
 
 export function AppShell({
@@ -169,11 +204,19 @@ export function AppShell({
         </button>
 
         <div className="mt-auto border-t border-border-subtle pt-space-md">
-          <button type="button" className="flex w-full items-center gap-space-sm rounded-lg px-space-sm py-space-sm text-sm text-text-muted transition hover:bg-surface-container-high hover:text-primary">
+          <button
+            type="button"
+            onClick={() => onViewChange("docs")}
+            className={chromeButtonClasses(activeView === "docs")}
+          >
             <BookOpen className="h-4 w-4" />
             Docs
           </button>
-          <button type="button" className="mt-1 flex w-full items-center gap-space-sm rounded-lg px-space-sm py-space-sm text-sm text-text-muted transition hover:bg-surface-container-high hover:text-primary">
+          <button
+            type="button"
+            onClick={() => onViewChange("support")}
+            className={`mt-1 ${chromeButtonClasses(activeView === "support")}`}
+          >
             <HelpCircle className="h-4 w-4" />
             Support
           </button>
@@ -217,10 +260,18 @@ export function AppShell({
                 <Shield className="h-4 w-4" />
                 {isVerifying ? "Verifying..." : "Verify Runtime"}
               </button>
-              <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-container-low hover:text-primary">
+              <button
+                type="button"
+                onClick={() => onViewChange("settings")}
+                className={iconButtonClasses(activeView === "settings")}
+              >
                 <Settings className="h-5 w-5" />
               </button>
-              <button type="button" className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-text-muted transition hover:bg-surface-container-low hover:text-primary">
+              <button
+                type="button"
+                onClick={() => onViewChange("profile")}
+                className={iconButtonClasses(activeView === "profile")}
+              >
                 <CircleUserRound className="h-5 w-5" />
               </button>
             </div>
@@ -250,10 +301,12 @@ export function AppShell({
             <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
               μZephyr v{status?.version ?? "0.1.0"} | {status?.runtime_initialized ? "SYSTEM_READY" : "INITIALIZING"}
             </div>
-            <div className="flex items-center gap-space-md">
-              <button type="button" className="transition hover:text-secondary">Terms</button>
-              <button type="button" className="transition hover:text-secondary">Privacy</button>
-              <button type="button" className="transition hover:text-secondary">API Docs</button>
+            <div className="flex flex-wrap items-center gap-space-md">
+              <button type="button" onClick={() => onViewChange("docs")} className={footerButtonClasses(activeView === "docs")}>Docs</button>
+              <button type="button" onClick={() => onViewChange("support")} className={footerButtonClasses(activeView === "support")}>Support</button>
+              <button type="button" onClick={() => onViewChange("terms")} className={footerButtonClasses(activeView === "terms")}>Terms</button>
+              <button type="button" onClick={() => onViewChange("privacy")} className={footerButtonClasses(activeView === "privacy")}>Privacy</button>
+              <button type="button" onClick={() => onViewChange("api-docs")} className={footerButtonClasses(activeView === "api-docs")}>API Docs</button>
             </div>
           </div>
         </footer>
