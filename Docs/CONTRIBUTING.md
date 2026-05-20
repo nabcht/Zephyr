@@ -1,6 +1,6 @@
 # Contributing to μZephyr
 
-Thank you for your interest in μZephyr. Contributions are welcome across the shared runtime, FastAPI bridge, React control room, skills, and documentation.
+Thank you for your interest in Zephyr. Contributions are welcome across the shared runtime, FastAPI bridge, React control room, skills, and documentation.
 
 ## Table of Contents
 
