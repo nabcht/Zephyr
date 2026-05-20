@@ -58,10 +58,20 @@ class HealthResponse(BaseModel):
 
 
 class InferenceMetricsResponse(BaseModel):
-    last_warmup_ms: float | None = None
+    last_warmup_milliseconds: float | None = None
     last_warmup_outcome: str = "not_run"
-    last_completion_ms: float | None = None
+    first_response_token_milliseconds: float | None = None
+    first_response_token_outcome: str = "not_run"
+    last_completion_milliseconds: float | None = None
     last_completion_outcome: str = "not_run"
+
+
+class ProviderPayloadMetricsResponse(BaseModel):
+    provider_message_count: int | None = None
+    history_message_count: int | None = None
+    tool_schema_count: int | None = None
+    serialized_payload_characters: int | None = None
+    used_lightweight_payload_strategy: bool | None = None
 
 
 class SystemStatusResponse(BaseModel):
@@ -73,6 +83,7 @@ class SystemStatusResponse(BaseModel):
     runtime_initialized: bool
     inference_status: str
     inference_metrics: InferenceMetricsResponse = Field(default_factory=InferenceMetricsResponse)
+    provider_payload_metrics: ProviderPayloadMetricsResponse = Field(default_factory=ProviderPayloadMetricsResponse)
     search_status: str
     external_integrations_enabled: bool
     safety_confirmation_required: bool

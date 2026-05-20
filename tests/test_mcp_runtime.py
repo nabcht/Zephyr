@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from core.mcp_contracts import MCPServerSettings, MCPServerStatus, MCPToolSpec
 from core.mcp_runtime import MCPRuntimeManager
@@ -154,6 +155,24 @@ class MCPRuntimeManagerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(discovered[0].tool.remote_name, "search")
         self.assertEqual(created_clients["Archive"].list_tools_calls, 2)
         self.assertTrue(created_clients["Archive"].closed)
+
+    async def test_reload_replaces_clients_from_latest_config(self) -> None:
+        memory = _FakeMemory()
+        manager = MCPRuntimeManager(
+            memory,
+            settings=[MCPServerSettings(name="Archive", command="python", args=[], env={})],
+            client_factory=_FakeClient,
+        )
+
+        original_client = manager.clients[0]
+        replacement = MCPServerSettings(name="Remote", command="npx", args=["-y", "mcp-remote"], env={})
+
+        with patch("core.mcp_runtime.config.get_mcp_server_configs", return_value=[replacement]):
+            await manager.reload()
+
+        self.assertTrue(original_client.closed)
+        self.assertEqual([client.server_name for client in manager.clients], ["Remote"])
+        self.assertEqual(memory.clients, manager.clients)
 
 
 if __name__ == "__main__":

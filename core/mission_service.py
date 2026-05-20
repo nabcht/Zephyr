@@ -24,10 +24,15 @@ class MissionService:
         user_task: str,
         *,
         allow_sensitive_tools: bool | None = None,
+        session_attachment_context: str = "",
     ) -> str:
         """Run one persisted mission turn for the active session."""
         await self.runtime.memory.add_message(session_id, "user", f"/mission {user_task}")
-        response = await self.run_mission(user_task, allow_sensitive_tools=allow_sensitive_tools)
+        response = await self.run_mission(
+            user_task,
+            allow_sensitive_tools=allow_sensitive_tools,
+            session_attachment_context=session_attachment_context,
+        )
         if response.strip():
             await self.runtime.memory.add_message(session_id, "assistant", response)
         return response
@@ -38,6 +43,7 @@ class MissionService:
         user_task: str,
         *,
         allow_sensitive_tools: bool | None = None,
+        session_attachment_context: str = "",
     ) -> AsyncGenerator[str, None]:
         """Stream mission progress snapshots and persist the final response."""
         await self.runtime.memory.add_message(session_id, "user", f"/mission {user_task}")
@@ -66,6 +72,7 @@ class MissionService:
                     user_task,
                     on_progress=publish,
                     allow_sensitive_tools=allow_sensitive_tools,
+                    session_attachment_context=session_attachment_context,
                 )
                 if response.strip():
                     await self.runtime.memory.add_message(session_id, "assistant", response)
@@ -94,11 +101,15 @@ class MissionService:
         *,
         on_progress: Callable[[Blackboard, str, int], Awaitable[None] | None] | None = None,
         allow_sensitive_tools: bool | None = None,
+        session_attachment_context: str = "",
     ) -> str:
         """Run one agency mission without mutating chat history."""
         from core.orchestrator import Agency
 
         agency = Agency(self.runtime.require_llm(), self.runtime.memory, self.console)
+        attachment_context = session_attachment_context.strip()
+        if attachment_context:
+            user_task = f"{user_task}\n\nActive session attachment context:\n{attachment_context}"
         return await agency.run_mission(
             user_task,
             on_progress=on_progress,

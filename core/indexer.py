@@ -13,7 +13,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import config
 from core.embedding_model import cache_embedding_model, embedding_model_is_cached
@@ -364,7 +364,13 @@ class LocalIndexer:
 
         return self.index_batch(files)
 
-    def index_batch(self, files: list[Path], *, allow_rebuild: bool = True) -> int:
+    def index_batch(
+        self,
+        files: list[Path],
+        *,
+        allow_rebuild: bool = True,
+        metadata_provider: Callable[[Path], dict[str, Any] | None] | None = None,
+    ) -> int:
         """Incrementally index a specific list of files if their mtime changed."""
         from whoosh.index import LockError
 
@@ -395,7 +401,8 @@ class LocalIndexer:
                         self._collection.delete(where={"source": str_path})
                         writer.delete_by_term("source", str_path)
 
-                    if self._index_file(fpath, writer):
+                    extra_metadata = metadata_provider(fpath) if metadata_provider is not None else None
+                    if self._index_file(fpath, writer, extra_metadata=extra_metadata):
                         self._mtime_cache[str_path] = current_mtime
                         indexed_count += 1
 
@@ -419,11 +426,44 @@ class LocalIndexer:
 
         return 0
 
-    def _index_file(self, path: Path, whoosh_writer: Any) -> bool:
+    def index_file(self, path: Path, *, extra_metadata: dict[str, Any] | None = None) -> bool:
+        """Explicitly index a single file, even when it lives outside the crawl roots."""
+        def _metadata_provider(_: Path) -> dict[str, Any] | None:
+            return extra_metadata
+
+        return self.index_batch([path], allow_rebuild=False, metadata_provider=_metadata_provider) > 0
+
+    def remove_file(self, path: Path) -> bool:
+        """Remove a file from the semantic store, keyword index, and mtime cache."""
+        str_path = str(path)
+
+        with LocalIndexer._whoosh_writer_lock:
+            writer = self._open_whoosh_writer()
+            try:
+                self._collection.delete(where={"source": str_path})
+                writer.delete_by_term("source", str_path)
+                writer.commit()
+            except Exception:
+                writer.cancel()
+                raise
+
+        self._mtime_cache.pop(str_path, None)
+        self._save_mtime_cache()
+        return True
+
+    def _index_file(
+        self,
+        path: Path,
+        whoosh_writer: Any,
+        *,
+        extra_metadata: dict[str, Any] | None = None,
+    ) -> bool:
         """Parse, chunk, embed, and store a single file."""
         blocks = parse_file(path)
         if not blocks:
             return False
+
+        metadata = dict(extra_metadata or {})
 
         all_chunks: list[dict[str, Any]] = []
         for block_idx, block in enumerate(blocks):
@@ -440,6 +480,7 @@ class LocalIndexer:
                     "page": block.get("page"),
                     "block_idx": block_idx,
                     "chunk_idx": i,
+                    "metadata": metadata,
                 })
 
         if not all_chunks:
@@ -461,6 +502,7 @@ class LocalIndexer:
                 "source": chunk_info["source"],
                 "source_name": chunk_info["source_name"],
                 "page": chunk_info["page"] or 0,
+                **chunk_info.get("metadata", {}),
             })
             documents.append(chunk_info["text"])
 

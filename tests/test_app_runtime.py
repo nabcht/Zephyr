@@ -6,6 +6,7 @@ from unittest.mock import patch, AsyncMock
 
 from core.app_runtime import AppRuntime
 from core.llm import InferenceRuntimePreparation
+from core.retriever import SearchResult
 
 
 class _FakeMemory:
@@ -17,6 +18,52 @@ class _FakeMemory:
 
     async def close(self) -> None:
         return None
+
+
+class _FakeContextMemory:
+    def __init__(self) -> None:
+        self.archive = object()
+
+    async def get_session_history(self, session_id: str, limit: int = 20) -> list[dict[str, str]]:
+        return [{"role": "assistant", "content": f"history for {session_id}"}]
+
+    async def get_durable_facts(self) -> str:
+        return "- prefers grounded answers"
+
+    async def get_session_attachments(self, session_id: str) -> list[dict[str, object]]:
+        return [
+            {
+                "attachment_id": "att-1",
+                "session_id": session_id,
+                "name": "notes.md",
+                "stored_path": "temp_core/attachments/test/att-1/notes.md",
+                "media_type": "text/markdown",
+                "size_bytes": 42,
+                "created_at": "2026-05-20T12:00:00+00:00",
+            }
+        ]
+
+
+class _FakeRetriever:
+    def __init__(self) -> None:
+        self.search_calls: list[dict[str, object]] = []
+
+    async def search(self, query: str, **kwargs: object) -> list[SearchResult]:
+        self.search_calls.append({"query": query, **kwargs})
+        return [
+            SearchResult(
+                text="Attachment excerpt",
+                source="temp_core/attachments/test/att-1/notes.md",
+                source_name="notes.md",
+                page=None,
+                score=0.99,
+                origin="semantic",
+            )
+        ]
+
+    @staticmethod
+    def format_results(results: list[SearchResult]) -> str:
+        return f"formatted:{results[0].text}"
 
 
 class _FakeToolEngine:
@@ -141,6 +188,22 @@ class AppRuntimeInferenceWarmupTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertTrue(prepared)
         schedule_refresh.assert_called_once_with()
+
+    async def test_build_chat_context_appends_session_attachment_context(self) -> None:
+        runtime = AppRuntime()
+        runtime.memory = _FakeContextMemory()
+        runtime.indexer = _FakeIndexer(1)
+        runtime.retriever = _FakeRetriever()
+
+        with patch.object(runtime, "ensure_search_runtime", AsyncMock(return_value=True)):
+            context = await runtime.build_chat_context("session-1", user_message="summarize the upload")
+
+        self.assertEqual(context.history[0]["content"], "history for session-1")
+        self.assertIn("## Durable Facts", context.system_prompt)
+        self.assertIn("## Session Attachments", context.system_prompt)
+        self.assertIn("formatted:Attachment excerpt", context.system_prompt)
+        self.assertEqual(runtime.retriever.search_calls[0]["query"], "summarize the upload")
+        self.assertEqual(runtime.retriever.search_calls[0]["semantic_where"], {"session_id": "session-1"})
 
 
 if __name__ == "__main__":

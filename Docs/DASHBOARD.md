@@ -42,9 +42,13 @@ Current behavior:
 
 - Restores the active session id from browser `sessionStorage`
 - Falls back to creating a new session when none exists or restore fails
-- Streams normal chat replies into the transcript
+- Streams normal chat replies into the transcript, including cumulative provider-response text when the active remote provider supports streaming
 - Streams mission progress snapshots into the same transcript
 - Persists completed assistant output and reloads stored history after each streamed run
+- Cancels abandoned browser chat turns before partial assistant output is persisted
+- Uses a lighter provider payload for explicit exact-answer prompts, skipping tool schemas, prior chat history, and appended durable-facts context for that specific request shape while keeping the fuller prompt context for broader no-tool requests
+- Short-circuits very simple exact-answer prompts locally so the Activity view can show `local_fast_path` inference outcomes and zero provider payload for that narrow request class
+- Reuses a short-lived cached direct answer for repeated identical provider-backed direct-answer requests, so the Activity view can show `local_response_cache` outcomes and zero provider payload on the repeated turn
 - Renders fenced code blocks separately from prose and offers `Copy Reply` for assistant messages
 - Exposes `Send Chat` and `Run Mission` actions from the same draft box
 
@@ -112,7 +116,7 @@ Current behavior:
 - Shows whether web execution is auto-approved or confirmation-gated
 - Surfaces the first startup-guidance warning prominently
 - Lists all startup-guidance actions from the backend status snapshot
-- Shows runtime metrics such as tool counts, remote capabilities, and exposed interfaces
+- Shows runtime metrics such as tool counts, remote capabilities, exposed interfaces, provider warm-up time, first-response-token time, full provider-call time, and the latest first-round provider payload size and composition
 - Streams live progress for runtime reload and runtime preparation
 - Shows the last verification summary and the latest preparation output
 - Exposes the page-level `Prepare Runtime` action
@@ -133,5 +137,6 @@ Current behavior:
 - `Reload tools` refreshes the shared runtime skill inventory and requests a background search refresh.
 - `Refresh MCP` re-runs only MCP discovery. If a server refresh fails after an earlier success, the command-center keeps the last successful inventory visible while surfacing the current error metadata.
 - `Prepare Runtime` prepares sandbox assets, embedding-model cache, and LlamaCPP assets when that provider is active.
+- `POST /api/chat/stream` now polls for browser disconnects during remote-provider streaming and skips persisting partial assistant output if the browser drops the request before completion.
 - Web verification intentionally caps mission eval time at 45 seconds. Use CLI `/verify` for the full regression-oriented pass.
 - The watcher-driven development backend excludes `skills/*/scripts/*.py` from process reload; use `Reload tools` to pick up those edits without bouncing the API.

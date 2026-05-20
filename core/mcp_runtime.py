@@ -57,6 +57,18 @@ class MCPRuntimeManager:
         for client in self._clients:
             await client.close()
 
+    async def reload(self, *, settings: Sequence[MCPServerSettings] | None = None) -> None:
+        """Rebuild managed MCP clients from the latest configuration."""
+        await self.aclose()
+
+        resolved_settings = list(settings) if settings is not None else config.get_mcp_server_configs()
+        self._clients = [self._client_factory(server_settings) for server_settings in resolved_settings]
+        self._cached_tool_inventory = {}
+
+        set_mcp_clients = getattr(self._memory, "set_mcp_clients", None)
+        if callable(set_mcp_clients):
+            set_mcp_clients(self._clients)
+
     async def discover_tools(self, *, force_refresh: bool = False) -> list[MCPDiscoveredTool]:
         """Discover tools across all enabled MCP clients using cached inventory when available."""
         discovered: list[MCPDiscoveredTool] = []

@@ -49,6 +49,20 @@ class MemoryManager:
                 timestamp TEXT    NOT NULL
             )
         """)
+        await self._db.execute("""
+            CREATE TABLE IF NOT EXISTS session_attachments (
+                attachment_id TEXT PRIMARY KEY,
+                session       TEXT    NOT NULL,
+                name          TEXT    NOT NULL,
+                stored_path   TEXT    NOT NULL UNIQUE,
+                media_type    TEXT    NOT NULL,
+                size_bytes    INTEGER NOT NULL,
+                created_at    TEXT    NOT NULL
+            )
+        """)
+        await self._db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_session_attachments_session ON session_attachments (session, created_at)"
+        )
         await self._db.commit()
         log.info("Memory subsystem ready (db=%s)", config.DB_PATH)
 
@@ -87,6 +101,96 @@ class MemoryManager:
         )
         rows = await cursor.fetchall()
         return [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+
+    @staticmethod
+    def _attachment_row_to_record(row: tuple[Any, ...]) -> dict[str, Any]:
+        return {
+            "attachment_id": str(row[0]),
+            "session_id": str(row[1]),
+            "name": str(row[2]),
+            "stored_path": str(row[3]),
+            "media_type": str(row[4]),
+            "size_bytes": int(row[5]),
+            "created_at": str(row[6]),
+        }
+
+    async def add_session_attachment(
+        self,
+        session: str,
+        attachment_id: str,
+        *,
+        name: str,
+        stored_path: str,
+        media_type: str,
+        size_bytes: int,
+    ) -> dict[str, Any]:
+        if self._db is None:
+            raise RuntimeError("MemoryManager is not initialised — call initialize() first.")
+
+        created_at = datetime.now(timezone.utc).isoformat()
+        await self._db.execute(
+            (
+                "INSERT INTO session_attachments "
+                "(attachment_id, session, name, stored_path, media_type, size_bytes, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)"
+            ),
+            (attachment_id, session, name, stored_path, media_type, int(size_bytes), created_at),
+        )
+        await self._db.commit()
+        return {
+            "attachment_id": attachment_id,
+            "session_id": session,
+            "name": name,
+            "stored_path": stored_path,
+            "media_type": media_type,
+            "size_bytes": int(size_bytes),
+            "created_at": created_at,
+        }
+
+    async def get_session_attachments(self, session: str) -> list[dict[str, Any]]:
+        if self._db is None:
+            raise RuntimeError("MemoryManager is not initialised — call initialize() first.")
+
+        cursor = await self._db.execute(
+            (
+                "SELECT attachment_id, session, name, stored_path, media_type, size_bytes, created_at "
+                "FROM session_attachments WHERE session = ? ORDER BY created_at ASC"
+            ),
+            (session,),
+        )
+        rows = await cursor.fetchall()
+        return [self._attachment_row_to_record(row) for row in rows]
+
+    async def get_session_attachment(self, session: str, attachment_id: str) -> dict[str, Any] | None:
+        if self._db is None:
+            raise RuntimeError("MemoryManager is not initialised — call initialize() first.")
+
+        cursor = await self._db.execute(
+            (
+                "SELECT attachment_id, session, name, stored_path, media_type, size_bytes, created_at "
+                "FROM session_attachments WHERE session = ? AND attachment_id = ?"
+            ),
+            (session, attachment_id),
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return None
+        return self._attachment_row_to_record(row)
+
+    async def remove_session_attachment(self, session: str, attachment_id: str) -> dict[str, Any] | None:
+        if self._db is None:
+            raise RuntimeError("MemoryManager is not initialised — call initialize() first.")
+
+        existing = await self.get_session_attachment(session, attachment_id)
+        if existing is None:
+            return None
+
+        await self._db.execute(
+            "DELETE FROM session_attachments WHERE session = ? AND attachment_id = ?",
+            (session, attachment_id),
+        )
+        await self._db.commit()
+        return existing
 
     # ══════════════════════════════════════════════════════════════════════
     #  LONG-TERM: Markdown durable facts

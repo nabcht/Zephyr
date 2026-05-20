@@ -1,19 +1,32 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ChatTurnRequest, ChatStreamEvent, SessionCreateResponse, SessionHistoryResponse, SessionMessage } from "../types/api";
+import type {
+  ChatTurnRequest,
+  ChatStreamEvent,
+  SessionAttachment,
+  SessionAttachmentListResponse,
+  SessionCreateResponse,
+  SessionHistoryResponse,
+  SessionMessage,
+} from "../types/api";
 
 const SESSION_STORAGE_KEY = "uzephyr.activeSessionId";
 
 interface UseChatSessionResult {
   sessionId: string | null;
   messages: SessionMessage[];
+  attachments: SessionAttachment[];
   error: string | null;
   isBootstrapping: boolean;
   isSending: boolean;
   isRunningMission: boolean;
+  isUploadingAttachments: boolean;
+  deletingAttachmentId: string | null;
   createSession: () => Promise<void>;
   sendMessage: (message: string) => Promise<void>;
   runMission: (message: string) => Promise<void>;
+  uploadAttachments: (files: File[]) => Promise<void>;
+  deleteAttachment: (attachmentId: string) => Promise<void>;
 }
 
 function requestSensitiveToolApproval(mode: "chat" | "mission"): boolean {
@@ -27,29 +40,52 @@ function requestSensitiveToolApproval(mode: "chat" | "mission"): boolean {
   );
 }
 
+async function requestJson<TResponse>(url: string, init?: RequestInit): Promise<TResponse> {
+  const response = await fetch(url, init);
+  if (!response.ok) {
+    let message = `Request failed with ${response.status}`;
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      try {
+        const payload = (await response.json()) as { detail?: unknown; message?: unknown };
+        const detail = payload.detail ?? payload.message;
+        if (typeof detail === "string" && detail.trim()) {
+          message = detail;
+        } else if (detail !== undefined) {
+          message = JSON.stringify(detail);
+        }
+      } catch {
+        // Fall back to the status-based message.
+      }
+    }
+
+    throw new Error(message);
+  }
+
+  return (await response.json()) as TResponse;
+}
+
 async function postJson<TResponse>(url: string, body?: unknown): Promise<TResponse> {
-  const response = await fetch(url, {
+  return requestJson<TResponse>(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
-
-  return (await response.json()) as TResponse;
 }
 
 async function getJson<TResponse>(url: string): Promise<TResponse> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
+  return requestJson<TResponse>(url);
+}
 
-  return (await response.json()) as TResponse;
+async function uploadAttachment<TResponse>(url: string, file: File): Promise<TResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return requestJson<TResponse>(url, {
+    method: "POST",
+    body: formData,
+  });
 }
 
 function storeSessionId(sessionId: string | null): void {
@@ -164,9 +200,12 @@ async function streamTurn(
 export function useChatSession(safetyConfirmationRequired: boolean): UseChatSessionResult {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<SessionMessage[]>([]);
+  const [attachments, setAttachments] = useState<SessionAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [pendingMode, setPendingMode] = useState<"chat" | "mission" | null>(null);
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
   const mountedRef = useRef(true);
 
   async function loadSessionHistory(activeSessionId: string): Promise<SessionMessage[]> {
@@ -175,6 +214,18 @@ export function useChatSession(safetyConfirmationRequired: boolean): UseChatSess
       setMessages(payload.messages);
     }
     return payload.messages;
+  }
+
+  async function loadSessionAttachments(activeSessionId: string): Promise<SessionAttachment[]> {
+    const payload = await getJson<SessionAttachmentListResponse>(`/api/sessions/${activeSessionId}/attachments`);
+    if (mountedRef.current) {
+      setAttachments(payload.attachments);
+    }
+    return payload.attachments;
+  }
+
+  async function loadSessionState(activeSessionId: string): Promise<void> {
+    await Promise.all([loadSessionHistory(activeSessionId), loadSessionAttachments(activeSessionId)]);
   }
 
   async function createFreshSession(): Promise<string> {
@@ -186,6 +237,7 @@ export function useChatSession(safetyConfirmationRequired: boolean): UseChatSess
     setSessionId(payload.session_id);
     storeSessionId(payload.session_id);
     setMessages([]);
+    setAttachments([]);
     return payload.session_id;
   }
 
@@ -203,7 +255,7 @@ export function useChatSession(safetyConfirmationRequired: boolean): UseChatSess
     setSessionId(storedSessionId);
     storeSessionId(storedSessionId);
     try {
-      await loadSessionHistory(storedSessionId);
+      await loadSessionState(storedSessionId);
     } catch {
       await createFreshSession();
     }
@@ -235,10 +287,13 @@ export function useChatSession(safetyConfirmationRequired: boolean): UseChatSess
   return {
     sessionId,
     messages,
+    attachments,
     error,
     isBootstrapping,
     isSending: pendingMode !== null,
     isRunningMission: pendingMode === "mission",
+    isUploadingAttachments,
+    deletingAttachmentId,
     createSession: async () => {
       setIsBootstrapping(true);
       setError(null);
@@ -341,6 +396,75 @@ export function useChatSession(safetyConfirmationRequired: boolean): UseChatSess
       } finally {
         if (mountedRef.current) {
           setPendingMode(null);
+        }
+      }
+    },
+    uploadAttachments: async (files: File[]) => {
+      if (files.length === 0 || isUploadingAttachments || deletingAttachmentId !== null || pendingMode !== null) {
+        return;
+      }
+
+      let activeSessionId: string | null = sessionId;
+      setError(null);
+      setIsUploadingAttachments(true);
+
+      try {
+        activeSessionId = activeSessionId ?? (await createFreshSession());
+        if (!mountedRef.current || activeSessionId === null) {
+          return;
+        }
+
+        for (const file of files) {
+          await uploadAttachment<SessionAttachment>(`/api/sessions/${activeSessionId}/attachments`, file);
+        }
+
+        if (mountedRef.current) {
+          await loadSessionAttachments(activeSessionId);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        if (mountedRef.current) {
+          setError(message);
+          if (activeSessionId !== null) {
+            try {
+              await loadSessionAttachments(activeSessionId);
+            } catch {
+              // Keep the original upload error when the follow-up refresh also fails.
+            }
+          }
+        }
+        throw error instanceof Error ? error : new Error(message);
+      } finally {
+        if (mountedRef.current) {
+          setIsUploadingAttachments(false);
+        }
+      }
+    },
+    deleteAttachment: async (attachmentId: string) => {
+      if (!sessionId || deletingAttachmentId !== null || isUploadingAttachments || pendingMode !== null) {
+        return;
+      }
+
+      setError(null);
+      setDeletingAttachmentId(attachmentId);
+
+      try {
+        await requestJson(`/api/sessions/${sessionId}/attachments/${attachmentId}`, {
+          method: "DELETE",
+        });
+
+        if (mountedRef.current) {
+          await loadSessionAttachments(sessionId);
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        if (mountedRef.current) {
+          setError(message);
+        }
+        throw error instanceof Error ? error : new Error(message);
+      } finally {
+        if (mountedRef.current) {
+          setDeletingAttachmentId(null);
         }
       }
     },

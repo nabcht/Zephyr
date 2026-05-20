@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 import logging
 from typing import Any
 
 from rich.console import Console
 
 from core.app_runtime import AppRuntime
+from core.llm import StreamedTurnCancelled
 
 log = logging.getLogger("uzephyr.chat_service")
 
@@ -30,7 +31,11 @@ class ChatService:
         allow_sensitive_tools: bool | None = None,
     ) -> str:
         """Run a single non-streaming chat turn and persist the final response."""
-        context = await self.runtime.build_chat_context(session_id, history_limit=self.history_limit)
+        context = await self.runtime.build_chat_context(
+            session_id,
+            user_message=user_message,
+            history_limit=self.history_limit,
+        )
         await self.runtime.memory.add_message(session_id, "user", user_message)
 
         response = await self.runtime.require_llm().chat(
@@ -51,20 +56,30 @@ class ChatService:
         user_message: str,
         *,
         allow_sensitive_tools: bool | None = None,
+        client_disconnect_check: Callable[[], Awaitable[bool]] | None = None,
     ) -> AsyncGenerator[str, None]:
         """Stream one chat turn and persist the final response when complete."""
-        context = await self.runtime.build_chat_context(session_id, history_limit=self.history_limit)
+        context = await self.runtime.build_chat_context(
+            session_id,
+            user_message=user_message,
+            history_limit=self.history_limit,
+        )
         await self.runtime.memory.add_message(session_id, "user", user_message)
 
         final_response = ""
-        async for chunk in self.runtime.require_llm().chat_stream_gui(
-            context.system_prompt,
-            context.history,
-            user_message,
-            allow_sensitive_tools=allow_sensitive_tools,
-        ):
-            final_response = chunk
-            yield chunk
+        try:
+            async for chunk in self.runtime.require_llm().chat_stream_gui(
+                context.system_prompt,
+                context.history,
+                user_message,
+                allow_sensitive_tools=allow_sensitive_tools,
+                client_disconnect_check=client_disconnect_check,
+            ):
+                final_response = chunk
+                yield chunk
+        except StreamedTurnCancelled:
+            log.debug("Skipped chat-turn persistence because the browser disconnected before completion.")
+            return
 
         await self._finalize_turn(session_id, final_response)
 

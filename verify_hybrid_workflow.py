@@ -232,6 +232,16 @@ async def verify_inference_status_degraded_on_failure() -> None:
     transport = httpx.ASGITransport(app=app)
 
     class FailingClient:
+        async def get(self, *args: object, **kwargs: object) -> object:
+            class SuccessfulWarmupResponse:
+                def raise_for_status(self) -> None:
+                    return None
+
+                def json(self) -> dict[str, object]:
+                    return {"data": []}
+
+            return SuccessfulWarmupResponse()
+
         async def post(self, *args: object, **kwargs: object) -> object:
             raise httpx.RequestError("simulated provider outage")
 
@@ -242,7 +252,7 @@ async def verify_inference_status_degraded_on_failure() -> None:
                     "/api/chat/turn",
                     json={
                         "session_id": "hybrid-degraded-inference",
-                        "message": "Reply with exactly OK. Do not call tools.",
+                        "message": "Without tools, summarize the current runtime degradation regression status.",
                     },
                 )
                 response.raise_for_status()
@@ -258,6 +268,160 @@ async def verify_inference_status_degraded_on_failure() -> None:
                     )
 
                 print("Inference degradation regression passed.")
+    finally:
+        await shutdown_runtime()
+
+
+async def verify_repeated_direct_answer_response_cache() -> None:
+    app = create_app()
+    transport = httpx.ASGITransport(app=app)
+
+    class FakeStreamingResponse:
+        def __init__(self, lines: list[str]) -> None:
+            self._lines = lines
+
+        async def __aenter__(self) -> FakeStreamingResponse:
+            return self
+
+        async def __aexit__(self, exc_type: object, exc: object, traceback: object) -> None:
+            return None
+
+        def raise_for_status(self) -> None:
+            return None
+
+        async def aiter_lines(self):
+            for line in self._lines:
+                yield line
+
+    class FakeCachingHttpClient:
+        def __init__(self) -> None:
+            self.stream_request_count = 0
+
+        async def get(self, *args: object, **kwargs: object) -> object:
+            class FakeResponse:
+                def raise_for_status(self) -> None:
+                    return None
+
+                def json(self) -> dict[str, object]:
+                    return {"data": []}
+
+            return FakeResponse()
+
+        def stream(self, *args: object, **kwargs: object) -> FakeStreamingResponse:
+            self.stream_request_count += 1
+            if self.stream_request_count > 1:
+                raise AssertionError(
+                    "Repeated identical direct-answer request should have used the local response cache instead of a second provider stream."
+                )
+
+            return FakeStreamingResponse(
+                [
+                    'data: {"choices": [{"delta": {"content": "Summary"}}]}',
+                    "data: [DONE]",
+                ]
+            )
+
+    async def collect_stream_chunks(
+        client: httpx.AsyncClient,
+        *,
+        session_id: str,
+        message: str,
+    ) -> list[str]:
+        chunks: list[str] = []
+        async with client.stream(
+            "POST",
+            "/api/chat/stream",
+            json={"session_id": session_id, "message": message},
+        ) as response:
+            response.raise_for_status()
+            event_name = ""
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                if line.startswith("event:"):
+                    event_name = line.split(":", 1)[1].strip()
+                    continue
+                if not line.startswith("data:"):
+                    continue
+
+                payload = json.loads(line.split(":", 1)[1].strip())
+                if event_name == "snapshot":
+                    content = str(payload.get("content", "")).strip()
+                    if content:
+                        chunks.append(content)
+                elif event_name == "done":
+                    break
+                elif event_name == "error":
+                    raise AssertionError(f"Repeated direct-answer cache regression failed: {payload}")
+
+        return chunks
+
+    fake_caching_http_client = FakeCachingHttpClient()
+
+    try:
+        with patch("core.llm.LLMRouter._http_client", return_value=fake_caching_http_client):
+            async with httpx.AsyncClient(transport=transport, base_url="http://testserver", timeout=180.0) as client:
+                repeated_message = "Without tools, summarize the repository status in one short sentence."
+                first_stream_chunks = await collect_stream_chunks(
+                    client,
+                    session_id="hybrid-direct-answer-cache-first",
+                    message=repeated_message,
+                )
+                second_stream_chunks = await collect_stream_chunks(
+                    client,
+                    session_id="hybrid-direct-answer-cache-second",
+                    message=repeated_message,
+                )
+
+                if not first_stream_chunks:
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: first streamed turn produced no snapshot content."
+                    )
+                if first_stream_chunks[-1] != "Summary":
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: first streamed turn did not produce the expected provider-backed summary."
+                    )
+                if second_stream_chunks != ["Summary"]:
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: repeated streamed turn should have returned only the cached final answer."
+                    )
+
+                status_response = await client.get("/api/system/status")
+                status_response.raise_for_status()
+                status_payload = status_response.json()
+                inference_metrics = status_payload.get("inference_metrics") or {}
+                provider_payload_metrics = status_payload.get("provider_payload_metrics") or {}
+
+                if inference_metrics.get("first_response_token_outcome") != "local_response_cache":
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: second turn should report local_response_cache for first-response-token outcome."
+                    )
+                if inference_metrics.get("last_completion_outcome") != "local_response_cache":
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: second turn should report local_response_cache for completion outcome."
+                    )
+                if inference_metrics.get("first_response_token_milliseconds") != 0.0:
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: second turn should report zero first-response-token latency."
+                    )
+                if inference_metrics.get("last_completion_milliseconds") != 0.0:
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: second turn should report zero completion latency."
+                    )
+                if provider_payload_metrics.get("provider_message_count") != 0:
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: second turn should report zero provider messages."
+                    )
+                if provider_payload_metrics.get("serialized_payload_characters") != 0:
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: second turn should report zero provider payload characters."
+                    )
+                if provider_payload_metrics.get("used_lightweight_payload_strategy") is not False:
+                    raise AssertionError(
+                        "Repeated direct-answer cache regression failed: repeated non-exact turn should keep lightweight-payload usage false."
+                    )
+
+                print("Repeated direct-answer cache regression passed.")
     finally:
         await shutdown_runtime()
 
@@ -373,8 +537,20 @@ async def verify_runtime_action_streams() -> None:
             if not reload_inference_status:
                 raise AssertionError("Runtime reload stream completed without an inference status")
             reload_metrics = reload_status_payload.get("inference_metrics") or {}
-            if "last_completion_ms" not in reload_metrics or "last_warmup_ms" not in reload_metrics:
+            if (
+                "last_completion_milliseconds" not in reload_metrics
+                or "last_warmup_milliseconds" not in reload_metrics
+                or "first_response_token_milliseconds" not in reload_metrics
+            ):
                 raise AssertionError("Runtime reload stream completed without inference timing metrics")
+            reload_payload_metrics = reload_status_payload.get("provider_payload_metrics") or {}
+            if (
+                "provider_message_count" not in reload_payload_metrics
+                or "history_message_count" not in reload_payload_metrics
+                or "tool_schema_count" not in reload_payload_metrics
+                or "serialized_payload_characters" not in reload_payload_metrics
+            ):
+                raise AssertionError("Runtime reload stream completed without provider payload metrics")
 
             with (
                 patch(
@@ -439,8 +615,20 @@ async def verify_runtime_action_streams() -> None:
             if not inference_status:
                 raise AssertionError("Runtime prepare stream completed without an inference status")
             inference_metrics = status_payload.get("inference_metrics") or {}
-            if "last_completion_ms" not in inference_metrics or "last_warmup_ms" not in inference_metrics:
+            if (
+                "last_completion_milliseconds" not in inference_metrics
+                or "last_warmup_milliseconds" not in inference_metrics
+                or "first_response_token_milliseconds" not in inference_metrics
+            ):
                 raise AssertionError("Runtime prepare stream completed without inference timing metrics")
+            provider_payload_metrics = status_payload.get("provider_payload_metrics") or {}
+            if (
+                "provider_message_count" not in provider_payload_metrics
+                or "history_message_count" not in provider_payload_metrics
+                or "tool_schema_count" not in provider_payload_metrics
+                or "serialized_payload_characters" not in provider_payload_metrics
+            ):
+                raise AssertionError("Runtime prepare stream completed without provider payload metrics")
             search_status = str(status_payload.get("search_status", "")).strip()
             if not search_status:
                 raise AssertionError("Runtime prepare stream completed without a search status")
@@ -474,6 +662,7 @@ async def main() -> None:
     await verify_command_center_inventory()
     await verify_runtime_action_streams()
     await verify_chat_stream_initial_snapshot()
+    await verify_repeated_direct_answer_response_cache()
     await verify_inference_status_warming_during_background_warmup()
     await verify_inference_status_degraded_on_failure()
     await verify_mission_stream()

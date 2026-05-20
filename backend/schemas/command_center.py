@@ -1,8 +1,8 @@
-"""Response schemas for the hybrid command-center endpoints."""
+"""Schemas for the hybrid command-center endpoints."""
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -64,12 +64,37 @@ class DurableMemoryResponse(BaseModel):
     facts: list[str] = Field(default_factory=list)
 
 
+class MCPConfiguredServerRequest(BaseModel):
+    name: str
+    command: str
+    args: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
+    cwd: str | None = None
+    tool_prefix: str = "mcp"
+
+
+class MCPConfigurationApplyRequest(BaseModel):
+    format: Literal["single", "indexed", "json"] = "single"
+    enable_mcp: bool = True
+    enable_external_integrations: bool = True
+    servers: list[MCPConfiguredServerRequest] = Field(default_factory=list)
+
+
 class CommandCenterOverviewResponse(BaseModel):
     runtime_initialized: bool
     commands: list[CommandReferenceResponse] = Field(default_factory=list)
     tools: list[ToolCatalogEntryResponse] = Field(default_factory=list)
     mcp: MCPOverviewResponse
     memory: DurableMemoryResponse
+
+
+class MCPConfigurationApplyResponse(BaseModel):
+    message: str
+    env_path: str
+    env_block: str
+    format: Literal["single", "indexed", "json"]
+    server_count: int
+    overview: CommandCenterOverviewResponse
 
 
 class RuntimeVerificationResponse(BaseModel):

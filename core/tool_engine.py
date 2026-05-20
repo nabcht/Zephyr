@@ -72,8 +72,13 @@ class ToolEngine:
     def get_openai_tool_schemas(
         self,
         allowed_tags: list[str] | None = None,
+        *,
+        compact_for_provider: bool = False,
     ) -> list[dict[str, Any]]:
-        return self._registry.get_openai_tool_schemas(allowed_tags=allowed_tags)
+        return self._registry.get_openai_tool_schemas(
+            allowed_tags=allowed_tags,
+            compact_for_provider=compact_for_provider,
+        )
 
     async def execute(
         self,
@@ -145,6 +150,13 @@ class ToolEngine:
     async def refresh_mcp_tools(self) -> None:
         """Re-discover MCP tools without reloading local skills or search state."""
         self._registry.remove_by_source({"mcp"})
+        await self._register_mcp_tools(force_refresh=True)
+
+    async def reload_mcp_runtime(self) -> None:
+        """Rebuild MCP clients from current config and refresh registered MCP tools."""
+        self._registry.remove_by_source({"mcp"})
+        self._recent_executions = [execution for execution in self._recent_executions if execution.source != "mcp"]
+        await self._mcp_runtime.reload()
         await self._register_mcp_tools(force_refresh=True)
 
     async def _register_mcp_tools(self, *, force_refresh: bool = False) -> None:

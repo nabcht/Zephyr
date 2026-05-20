@@ -46,10 +46,20 @@ export interface ToolCounts {
 }
 
 export interface InferenceMetrics {
-  last_warmup_ms: number | null;
+  last_warmup_milliseconds: number | null;
   last_warmup_outcome: string;
-  last_completion_ms: number | null;
+  first_response_token_milliseconds: number | null;
+  first_response_token_outcome: string;
+  last_completion_milliseconds: number | null;
   last_completion_outcome: string;
+}
+
+export interface ProviderPayloadMetrics {
+  provider_message_count: number | null;
+  history_message_count: number | null;
+  tool_schema_count: number | null;
+  serialized_payload_characters: number | null;
+  used_lightweight_payload_strategy: boolean | null;
 }
 
 export interface SystemStatus {
@@ -61,6 +71,7 @@ export interface SystemStatus {
   runtime_initialized: boolean;
   inference_status: string;
   inference_metrics: InferenceMetrics;
+  provider_payload_metrics: ProviderPayloadMetrics;
   search_status: string;
   external_integrations_enabled: boolean;
   safety_confirmation_required: boolean;
@@ -84,6 +95,26 @@ export interface SessionMessage {
 export interface SessionHistoryResponse {
   session_id: string;
   messages: SessionMessage[];
+}
+
+export interface SessionAttachment {
+  attachment_id: string;
+  session_id: string;
+  name: string;
+  media_type: string;
+  size_bytes: number;
+  created_at: string;
+}
+
+export interface SessionAttachmentListResponse {
+  session_id: string;
+  attachments: SessionAttachment[];
+}
+
+export interface SessionAttachmentDeleteResponse {
+  session_id: string;
+  attachment_id: string;
+  deleted: boolean;
 }
 
 export interface ChatTurnRequest {
@@ -169,6 +200,24 @@ export interface MCPOverview {
   recent_executions: MCPToolExecution[];
 }
 
+export type MCPConfigurationFormat = "single" | "indexed" | "json";
+
+export interface MCPConfiguredServer {
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  cwd: string | null;
+  tool_prefix: string;
+}
+
+export interface MCPConfigurationApplyRequest {
+  format: MCPConfigurationFormat;
+  enable_mcp: boolean;
+  enable_external_integrations: boolean;
+  servers: MCPConfiguredServer[];
+}
+
 export interface DurableMemory {
   facts: string[];
 }
@@ -179,6 +228,22 @@ export interface CommandCenterOverview {
   tools: ToolCatalogEntry[];
   mcp: MCPOverview;
   memory: DurableMemory;
+}
+
+export interface MCPConfigurationApplyResponse {
+  message: string;
+  env_path: string;
+  env_block: string;
+  format: MCPConfigurationFormat;
+  server_count: number;
+  overview: CommandCenterOverview;
+}
+
+export interface MarkdownDocument {
+  slug: string;
+  title: string;
+  content: string;
+  source_path: string;
 }
 
 export interface RuntimeVerification {

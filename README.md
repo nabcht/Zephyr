@@ -134,10 +134,11 @@ If startup guidance reports missing local assets, use the `Prepare Runtime` acti
 - `POST /api/missions/turn`
 - `POST /api/missions/stream`
 - `GET /api/command-center/overview`
+- `POST /api/command-center/mcp/apply`
 - `POST /api/command-center/mcp/refresh`
 - `POST /api/command-center/verify`
 
-`DASHBOARD.md` documents how those endpoints map onto the current React control room.
+The full documentation set now lives under `Docs/`, and `Docs/DASHBOARD.md` maps those endpoints onto the current React control room.
 
 ## Configuration
 
@@ -187,7 +188,9 @@ MCP_SERVERS_JSON=[{"name":"archive","command":"python","args":["-m","archive_mcp
 
 ### MCP Operations And Troubleshooting
 
+- Use the `Guided MCP Setup` block in the web `Command Center` when you want the browser to build, save, and apply `.env` configuration for one or more MCP servers. Remote MCP URLs are translated into the stdio launcher format the runtime already supports.
 - Use `/mcp` in the CLI or the `Command Center` MCP panel in the web app to inspect server state, cached tool inventory, discovery freshness, last successful connection time, degraded reason, and the latest MCP execution results.
+- The Command Center walkthrough can save either single-server keys, indexed `MCP_SERVER_1_*` keys, or `MCP_SERVERS_JSON`, then refresh the live MCP runtime without a full process restart.
 - Use `/mcp refresh` in the CLI or `Refresh MCP` in the web `Command Center` to re-run MCP discovery without reloading the full runtime or local skill catalog.
 - If a refresh fails after a previous successful discovery, the runtime keeps showing the last successful cached inventory while surfacing the current error state. This keeps operator visibility stable, but the cached tool list is not proof that the server is currently healthy.
 - If MCP servers do not appear at all, check `MCP_ENABLED`, `EXTERNAL_SUBPROCESS_INTEGRATIONS_ENABLED`, and the resolved command path first. Packaged mode intentionally defaults external subprocess integrations off.
@@ -203,7 +206,7 @@ uZephyr is built for extensibility.
 2. Implement the skill logic in a Python module.
 3. Reload the runtime with `/reload` in the CLI or `Reload tools` in the web interface.
 
-See `CONTRIBUTING.md` for the contribution workflow.
+See `Docs/CONTRIBUTING.md` for the contribution workflow.
 
 ## Runtime-Generated Files
 
@@ -224,8 +227,10 @@ Some files and directories are created locally at runtime and are intentionally 
 
 ## Related Docs
 
-- `HYBRID_MIGRATION_STATUS.md` for the migration and parity record
-- `DASHBOARD.md` for the current control-room map
+- `Docs/README.md` for the centralized documentation index
+- `Docs/glossary.md` for shared runtime and product terminology
+- `Docs/HYBRID_MIGRATION_STATUS.md` for the migration and parity record
+- `Docs/DASHBOARD.md` for the current control-room map
 
 ## Notes
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 
 import config
 
@@ -60,6 +60,7 @@ class ChatSessionService:
         message: str,
         *,
         allow_sensitive_tools: bool | None = None,
+        client_disconnect_check: Callable[[], Awaitable[bool]] | None = None,
     ) -> AsyncGenerator[str, None]:
         """Stream one persisted chat turn for the provided session."""
         runtime = get_runtime()
@@ -71,5 +72,6 @@ class ChatSessionService:
             session_id,
             message,
             allow_sensitive_tools=self._resolve_sensitive_tool_approval(allow_sensitive_tools),
+            client_disconnect_check=client_disconnect_check,
         ):
             yield chunk

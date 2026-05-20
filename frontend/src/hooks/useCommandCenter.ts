@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 
-import type { CommandCenterOverview, RuntimeVerification } from "../types/api";
+import type {
+  CommandCenterOverview,
+  MCPConfigurationApplyRequest,
+  MCPConfigurationApplyResponse,
+  RuntimeVerification,
+} from "../types/api";
 
 interface UseCommandCenterResult {
   overview: CommandCenterOverview | null;
@@ -8,16 +13,34 @@ interface UseCommandCenterResult {
   error: string | null;
   isLoading: boolean;
   isRefreshingMcp: boolean;
+  isApplyingMcp: boolean;
   isVerifying: boolean;
   refresh: () => Promise<void>;
   refreshMcpDiscovery: () => Promise<void>;
+  applyMcpConfiguration: (payload: MCPConfigurationApplyRequest) => Promise<MCPConfigurationApplyResponse>;
   verifyRuntime: () => Promise<void>;
 }
 
 async function requestJson<TResponse>(url: string, init?: RequestInit, signal?: AbortSignal): Promise<TResponse> {
   const response = await fetch(url, { ...init, signal });
   if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
+    let message = `Request failed with ${response.status}`;
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      try {
+        const payload = (await response.json()) as { detail?: unknown; message?: unknown };
+        const detail = payload.detail ?? payload.message;
+        if (typeof detail === "string" && detail.trim()) {
+          message = detail;
+        } else if (detail !== undefined) {
+          message = JSON.stringify(detail);
+        }
+      } catch {
+        // Fall back to the status-based error message when the error payload is not JSON.
+      }
+    }
+
+    throw new Error(message);
   }
 
   return (await response.json()) as TResponse;
@@ -29,6 +52,7 @@ export function useCommandCenter(): UseCommandCenterResult {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingMcp, setIsRefreshingMcp] = useState(false);
+  const [isApplyingMcp, setIsApplyingMcp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
   async function load(signal?: AbortSignal): Promise<void> {
@@ -62,6 +86,7 @@ export function useCommandCenter(): UseCommandCenterResult {
     error,
     isLoading,
     isRefreshingMcp,
+    isApplyingMcp,
     isVerifying,
     refresh: async () => load(),
     refreshMcpDiscovery: async () => {
@@ -73,6 +98,27 @@ export function useCommandCenter(): UseCommandCenterResult {
         setError(error instanceof Error ? error.message : "Unknown error");
       } finally {
         setIsRefreshingMcp(false);
+      }
+    },
+    applyMcpConfiguration: async (payload) => {
+      setIsApplyingMcp(true);
+      setError(null);
+      try {
+        const response = await requestJson<MCPConfigurationApplyResponse>("/api/command-center/mcp/apply", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        setOverview(response.overview);
+        return response;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        setError(message);
+        throw error instanceof Error ? error : new Error(message);
+      } finally {
+        setIsApplyingMcp(false);
       }
     },
     verifyRuntime: async () => {

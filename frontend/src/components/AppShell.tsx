@@ -25,6 +25,7 @@ export type AppView =
   | "posture"
   | "activity"
   | "docs"
+  | "glossary"
   | "support"
   | "settings"
   | "profile"
@@ -214,6 +215,14 @@ export function AppShell({
           </button>
           <button
             type="button"
+            onClick={() => onViewChange("glossary")}
+            className={`mt-1 ${chromeButtonClasses(activeView === "glossary")}`}
+          >
+            <Search className="h-4 w-4" />
+            Glossary
+          </button>
+          <button
+            type="button"
             onClick={() => onViewChange("support")}
             className={`mt-1 ${chromeButtonClasses(activeView === "support")}`}
           >
@@ -303,6 +312,7 @@ export function AppShell({
             </div>
             <div className="flex flex-wrap items-center gap-space-md">
               <button type="button" onClick={() => onViewChange("docs")} className={footerButtonClasses(activeView === "docs")}>Docs</button>
+              <button type="button" onClick={() => onViewChange("glossary")} className={footerButtonClasses(activeView === "glossary")}>Glossary</button>
               <button type="button" onClick={() => onViewChange("support")} className={footerButtonClasses(activeView === "support")}>Support</button>
               <button type="button" onClick={() => onViewChange("terms")} className={footerButtonClasses(activeView === "terms")}>Terms</button>
               <button type="button" onClick={() => onViewChange("privacy")} className={footerButtonClasses(activeView === "privacy")}>Privacy</button>

@@ -38,13 +38,22 @@ class HybridRetriever:
 
     # ── Semantic search via ChromaDB ──────────────────────────────────────
 
-    def semantic_search(self, query: str, top_k: int = 3) -> list[SearchResult]:
+    def semantic_search(
+        self,
+        query: str,
+        top_k: int = 3,
+        *,
+        where: dict[str, Any] | None = None,
+    ) -> list[SearchResult]:
         query_embedding = self._indexer.embed_model.encode([query]).tolist()
-        results = self._collection.query(
-            query_embeddings=query_embedding,
-            n_results=top_k,
-            include=["documents", "metadatas", "distances"],
-        )
+        query_kwargs: dict[str, Any] = {
+            "query_embeddings": query_embedding,
+            "n_results": top_k,
+            "include": ["documents", "metadatas", "distances"],
+        }
+        if where:
+            query_kwargs["where"] = where
+        results = self._collection.query(**query_kwargs)
 
         hits: list[SearchResult] = []
         if not results or not results.get("documents"):
@@ -69,24 +78,37 @@ class HybridRetriever:
 
     # ── Keyword search via Whoosh ─────────────────────────────────────────
 
-    def keyword_search(self, query: str, top_k: int = 5) -> list[SearchResult]:
+    def keyword_search(
+        self,
+        query: str,
+        top_k: int = 5,
+        *,
+        source_allowlist: set[str] | None = None,
+    ) -> list[SearchResult]:
         from whoosh.qparser import MultifieldParser
 
         hits: list[SearchResult] = []
         with self._whoosh_index.searcher() as searcher:
             parser = MultifieldParser(["content"], schema=self._whoosh_index.schema)
             parsed_query = parser.parse(query)
-            whoosh_results = searcher.search(parsed_query, limit=top_k)
+            query_limit = top_k if source_allowlist is None else max(top_k * 10, len(source_allowlist) * 5, 25)
+            whoosh_results = searcher.search(parsed_query, limit=query_limit)
 
             for hit in whoosh_results:
+                source = hit.get("source", "")
+                if source_allowlist is not None and source not in source_allowlist:
+                    continue
+
                 hits.append(SearchResult(
                     text=hit["content"],
-                    source=hit.get("source", ""),
-                    source_name=hit.get("source", "").rsplit("/", 1)[-1].rsplit("\\", 1)[-1],
+                    source=source,
+                    source_name=source.rsplit("/", 1)[-1].rsplit("\\", 1)[-1],
                     page=hit.get("page") or None,
                     score=float(hit.score),
                     origin="keyword",
                 ))
+                if len(hits) >= top_k:
+                    break
         return hits
 
     # ── Entity memory injection (Truth-First) ─────────────────────────────
@@ -217,14 +239,25 @@ class HybridRetriever:
 
     # ── Hybrid merge + deduplication ──────────────────────────────────────
 
-    async def search(self, query: str, semantic_k: int = 5, keyword_k: int = 5, top_k: int = 5) -> list[SearchResult]:
+    async def search(
+        self,
+        query: str,
+        semantic_k: int = 5,
+        keyword_k: int = 5,
+        top_k: int = 5,
+        *,
+        include_brain: bool = True,
+        include_archive: bool = True,
+        semantic_where: dict[str, Any] | None = None,
+        source_allowlist: set[str] | None = None,
+    ) -> list[SearchResult]:
         """Run entity, semantic, keyword, and archive searches; merge using RRF."""
-        entity_hits = self.entity_search(query)
-        truth_hits = self.truth_search(query, top_k=2)
-        timeline_hits = self.timeline_search(query, top_k=3)
-        semantic_hits = self.semantic_search(query, top_k=semantic_k)
-        keyword_hits = self.keyword_search(query, top_k=keyword_k)
-        archive_hits = await self.archive_search(query, top_k=top_k)
+        entity_hits = self.entity_search(query) if include_brain else []
+        truth_hits = self.truth_search(query, top_k=2) if include_brain else []
+        timeline_hits = self.timeline_search(query, top_k=3) if include_brain else []
+        semantic_hits = self.semantic_search(query, top_k=semantic_k, where=semantic_where)
+        keyword_hits = self.keyword_search(query, top_k=keyword_k, source_allowlist=source_allowlist)
+        archive_hits = await self.archive_search(query, top_k=top_k) if include_archive else []
 
         seen_texts: set[str] = set()
         merged: list[SearchResult] =[]

@@ -24,6 +24,7 @@ duckduckgo-search>=6.1.0
 
 # Utilities
 aiofiles>=23.2.1
+python-multipart>=0.0.9
 
 # ── Optimised Local Search ────────────────────────────────────────────────────
 # Semantic embeddings (CPU-friendly, ~80 MB model)

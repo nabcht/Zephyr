@@ -2,7 +2,7 @@ import { CheckCircle2, Command, FolderSync, RefreshCw } from "lucide-react";
 
 import { CommandCenterPanel } from "../components/CommandCenterPanel";
 import { WorkspaceHeader } from "../components/WorkspaceHeader";
-import type { CommandCenterOverview, RuntimeVerification } from "../types/api";
+import type { CommandCenterOverview, MCPConfigurationApplyRequest, MCPConfigurationApplyResponse, RuntimeVerification } from "../types/api";
 
 interface CommandCenterPageProps {
   overview: CommandCenterOverview | null;
@@ -10,9 +10,11 @@ interface CommandCenterPageProps {
   error: string | null;
   isLoading: boolean;
   isRefreshingMcp: boolean;
+  isApplyingMcp: boolean;
   isVerifying: boolean;
   onRefresh: () => Promise<void>;
   onRefreshMcp: () => Promise<void>;
+  onApplyMcp: (payload: MCPConfigurationApplyRequest) => Promise<MCPConfigurationApplyResponse>;
   onVerify: () => Promise<void>;
 }
 
@@ -22,9 +24,11 @@ export function CommandCenterPage({
   error,
   isLoading,
   isRefreshingMcp,
+  isApplyingMcp,
   isVerifying,
   onRefresh,
   onRefreshMcp,
+  onApplyMcp,
   onVerify,
 }: CommandCenterPageProps) {
   return (
@@ -55,9 +59,11 @@ export function CommandCenterPage({
         error={error}
         isLoading={isLoading}
         isRefreshingMcp={isRefreshingMcp}
+        isApplyingMcp={isApplyingMcp}
         isVerifying={isVerifying}
         onRefresh={onRefresh}
         onRefreshMcp={onRefreshMcp}
+        onApplyMcp={onApplyMcp}
         onVerify={onVerify}
       />
     </div>

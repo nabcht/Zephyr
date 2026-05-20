@@ -36,6 +36,7 @@ class AppRuntime:
         self.tool_engine: ToolEngine | None = None
         self.llm: LLMRouter | None = None
         self.indexer: LocalIndexer | None = None
+        self.retriever: HybridRetriever | None = None
         self.search_status = "[yellow]Starting[/]"
         self._memory_ready = False
         self._initialized = False
@@ -102,6 +103,7 @@ class AppRuntime:
 
         await self.memory.close()
         self.indexer = None
+        self.retriever = None
         self.search_status = "[yellow]Stopped[/]"
         self._search_refresh_deferred = False
         self._memory_ready = False
@@ -120,16 +122,67 @@ class AppRuntime:
             raise RuntimeError("App runtime is not initialized.")
         return self.tool_engine
 
-    async def build_chat_context(self, session_id: str, *, history_limit: int = 20) -> ChatContext:
+    async def build_chat_context(
+        self,
+        session_id: str,
+        *,
+        user_message: str = "",
+        history_limit: int = 20,
+    ) -> ChatContext:
         """Build message history and system prompt for the next chat turn."""
         history = await self.memory.get_session_history(session_id, limit=history_limit)
         durable_facts = await self.memory.get_durable_facts()
+        attachment_context = await self.build_session_attachment_context(session_id, user_message)
 
         system_prompt = config.SYSTEM_PROMPT
         if durable_facts:
             system_prompt += f"\n\n## Durable Facts\n{durable_facts}"
+        if attachment_context:
+            system_prompt += f"\n\n## Session Attachments\n{attachment_context}"
 
         return ChatContext(history=history, system_prompt=system_prompt)
+
+    async def build_session_attachment_context(self, session_id: str, query: str, *, top_k: int = 4) -> str:
+        """Return retrieved attachment excerpts scoped to the active web session."""
+        normalized_query = query.strip()
+        if not normalized_query:
+            return ""
+
+        attachments = await self.memory.get_session_attachments(session_id)
+        if not attachments:
+            return ""
+
+        search_ready = await self.ensure_search_runtime(wait_for_completion=True)
+        if not search_ready or self.retriever is None:
+            return ""
+
+        source_allowlist = {str(item["stored_path"]) for item in attachments}
+        if not source_allowlist:
+            return ""
+
+        results = await self.retriever.search(
+            normalized_query,
+            semantic_k=max(3, top_k),
+            keyword_k=max(5, top_k * 2),
+            top_k=top_k,
+            include_brain=False,
+            include_archive=False,
+            semantic_where={"session_id": session_id},
+            source_allowlist=source_allowlist,
+        )
+
+        attachment_names = ", ".join(str(item["name"]) for item in attachments[:5])
+        if len(attachments) > 5:
+            attachment_names += f", +{len(attachments) - 5} more"
+
+        if not results:
+            return f"Active files: {attachment_names}"
+
+        return (
+            f"Active files: {attachment_names}\n"
+            "Retrieved excerpts from the active session attachments:\n\n"
+            f"{self.retriever.format_results(results)}"
+        )
 
     async def reload_skills(self) -> None:
         """Reload registered local and external tool definitions."""
@@ -310,10 +363,12 @@ class AppRuntime:
         try:
             retriever = HybridRetriever(indexer, archive=self.memory.archive)
             self.indexer = indexer
+            self.retriever = retriever
             self._bind_search_tools(retriever)
             self._configure_initial_search_refresh()
         except Exception as exc:
             self.indexer = None
+            self.retriever = None
             self._search_refresh_deferred = False
             self.search_status = f"[yellow]Fallback[/] (grep only, {type(exc).__name__})"
             log.warning("Search runtime warm-up failed; grep fallback remains active: %s", exc)

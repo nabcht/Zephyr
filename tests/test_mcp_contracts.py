@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
 import unittest
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from unittest.mock import AsyncMock, patch
 
 import config
-from core.mcp_client import MCPStdioClient
+from core.mcp_client import MCPStdioClient, _await_with_timeout
 from core.mcp_contracts import MCPErrorKind, MCPServerSettings, MCPServerState, MCPToolError, MCPToolResult
 
 
@@ -131,6 +132,30 @@ class MCPClientContractTests(unittest.TestCase):
 
 
 class MCPClientInvocationTests(unittest.IsolatedAsyncioTestCase):
+    async def test_await_with_timeout_keeps_async_context_cleanup_on_same_task(self) -> None:
+        entered_task: asyncio.Task[object] | None = None
+
+        class SameTaskContextManager:
+            async def __aenter__(self) -> str:
+                nonlocal entered_task
+                entered_task = asyncio.current_task()
+                return "ok"
+
+            async def __aexit__(self, exc_type, exc, tb) -> bool:
+                self_task = asyncio.current_task()
+                if self_task is not entered_task:
+                    raise RuntimeError("async context exited in a different task")
+                return False
+
+        exit_stack = AsyncExitStack()
+        value = await _await_with_timeout(
+            exit_stack.enter_async_context(SameTaskContextManager()),
+            timeout_seconds=1.0,
+        )
+
+        self.assertEqual(value, "ok")
+        await exit_stack.aclose()
+
     async def test_invoke_tool_returns_typed_result(self) -> None:
         client = MCPStdioClient(
             MCPServerSettings(

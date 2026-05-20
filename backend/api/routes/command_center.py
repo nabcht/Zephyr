@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from backend.schemas.command_center import CommandCenterOverviewResponse, RuntimeVerificationResponse
+from backend.schemas.command_center import (
+    CommandCenterOverviewResponse,
+    MCPConfigurationApplyRequest,
+    MCPConfigurationApplyResponse,
+    RuntimeVerificationResponse,
+)
 from backend.services.command_center_service import CommandCenterService
 
 router = APIRouter(prefix="/api/command-center", tags=["command-center"])
@@ -21,6 +26,15 @@ async def get_command_center_overview() -> CommandCenterOverviewResponse:
 async def refresh_mcp_discovery() -> CommandCenterOverviewResponse:
     """Refresh cached MCP discovery inventory without reloading the full runtime."""
     return await service.refresh_mcp_discovery()
+
+
+@router.post("/mcp/apply", response_model=MCPConfigurationApplyResponse)
+async def apply_mcp_configuration(payload: MCPConfigurationApplyRequest) -> MCPConfigurationApplyResponse:
+    """Persist walkthrough-generated MCP settings and refresh the live runtime."""
+    try:
+        return await service.apply_mcp_configuration(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/verify", response_model=RuntimeVerificationResponse)

@@ -39,6 +39,7 @@ async def stream_chat_turn(payload: ChatTurnRequest, request: Request) -> Stream
                 payload.session_id,
                 payload.message,
                 allow_sensitive_tools=payload.allow_sensitive_tools,
+                client_disconnect_check=request.is_disconnected,
             ):
                 if await request.is_disconnected():
                     break

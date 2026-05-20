@@ -7,6 +7,7 @@ import {
   HelpCircle,
   LockKeyhole,
   MessageSquare,
+  Search,
   Settings,
   Shield,
   type LucideIcon,
@@ -14,6 +15,7 @@ import {
 import type { ReactNode } from "react";
 
 import type { AppView } from "../components/AppShell";
+import { MarkdownDocumentPage } from "../components/MarkdownDocumentPage";
 import { WorkspaceHeader } from "../components/WorkspaceHeader";
 import type { SystemStatus } from "../types/api";
 
@@ -24,10 +26,17 @@ interface NavigationPageProps {
 }
 
 interface PageSectionProps {
-  eyebrow?: string;
   title: string;
-  description?: string;
   children: ReactNode;
+  eyebrow?: string;
+  description?: string;
+}
+
+interface ActionLinkProps {
+  label: string;
+  view: AppView;
+  onNavigate: (view: AppView) => void;
+  icon: LucideIcon;
 }
 
 interface KeyValueItem {
@@ -35,33 +44,12 @@ interface KeyValueItem {
   value: string;
 }
 
-function PageSection({ eyebrow, title, description, children }: PageSectionProps) {
-  return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-space-md shadow-sm">
-      {eyebrow ? <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">{eyebrow}</div> : null}
-      <h2 className="mt-1 text-xl font-semibold text-primary">{title}</h2>
-      {description ? <p className="mt-2 text-sm leading-6 text-text-muted">{description}</p> : null}
-      <div className="mt-space-md">{children}</div>
-    </section>
-  );
-}
-
-function ActionLink({
-  label,
-  view,
-  onNavigate,
-  icon: Icon,
-}: {
-  label: string;
-  view: AppView;
-  onNavigate: (view: AppView) => void;
-  icon: LucideIcon;
-}) {
+function ActionLink({ label, view, onNavigate, icon: Icon }: ActionLinkProps) {
   return (
     <button
       type="button"
       onClick={() => onNavigate(view)}
-      className="inline-flex items-center gap-space-sm rounded-lg border border-border-subtle px-space-md py-space-sm text-sm font-medium text-primary transition hover:bg-surface-container-low"
+      className="inline-flex items-center gap-space-sm rounded-lg border border-border-subtle bg-surface px-space-sm py-space-sm text-sm font-medium text-primary transition hover:border-secondary/30 hover:text-secondary"
     >
       <Icon className="h-4 w-4" />
       {label}
@@ -69,13 +57,25 @@ function ActionLink({
   );
 }
 
+function PageSection({ title, children, eyebrow, description }: PageSectionProps) {
+  return (
+    <section className="rounded-xl border border-border-subtle bg-surface p-space-lg shadow-sm">
+      <div className="space-y-2">
+        {eyebrow ? <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-text-muted">{eyebrow}</p> : null}
+        <h2 className="text-lg font-semibold text-primary">{title}</h2>
+        {description ? <p className="text-sm leading-6 text-text-muted">{description}</p> : null}
+      </div>
+      <div className="mt-space-md">{children}</div>
+    </section>
+  );
+}
+
 function BulletList({ items }: { items: string[] }) {
   return (
-    <ul className="space-y-3 text-sm leading-6 text-text-muted">
+    <ul className="space-y-3 pl-6 text-sm leading-7 text-text-muted">
       {items.map((item) => (
-        <li key={item} className="flex gap-space-sm">
-          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-secondary" />
-          <span>{item}</span>
+        <li key={item} className="list-disc">
+          {item}
         </li>
       ))}
     </ul>
@@ -84,11 +84,11 @@ function BulletList({ items }: { items: string[] }) {
 
 function KeyValueGrid({ items }: { items: KeyValueItem[] }) {
   return (
-    <div className="grid gap-space-sm sm:grid-cols-2">
+    <div className="grid gap-space-md sm:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => (
-        <article key={item.label} className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-sm">
-          <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">{item.label}</div>
-          <div className="mt-2 text-sm font-medium text-primary">{item.value}</div>
+        <article key={item.label} className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">{item.label}</p>
+          <p className="mt-2 text-sm font-medium leading-6 text-primary">{item.value}</p>
         </article>
       ))}
     </div>
@@ -132,166 +132,38 @@ function readOnlyStatusValue(value: string | number | boolean | null | undefined
 
 export function DocsPage({ onNavigate }: NavigationPageProps) {
   return (
-    <div className="space-y-6">
-      <WorkspaceHeader
-        eyebrow="Docs"
-        title="uZephyr Features & Architecture"
-        subtitle="A deeper tour of the hybrid control room, FastAPI bridge, and local-first runtime that power day-to-day operator workflows."
-        icon={BookOpen}
-        actions={
-          <>
-            <ActionLink label="API Docs" view="api-docs" onNavigate={onNavigate} icon={FileCode2} />
-            <ActionLink label="Privacy" view="privacy" onNavigate={onNavigate} icon={LockKeyhole} />
-          </>
-        }
-      />
+    <MarkdownDocumentPage
+      slug="docs"
+      eyebrow="Docs"
+      fallbackTitle="uZephyr Features & Architecture"
+      fallbackSubtitle="Loading the architecture guide from the Docs folder."
+      icon={BookOpen}
+      actions={
+        <>
+          <ActionLink label="Glossary" view="glossary" onNavigate={onNavigate} icon={Search} />
+          <ActionLink label="API Docs" view="api-docs" onNavigate={onNavigate} icon={FileCode2} />
+          <ActionLink label="Privacy" view="privacy" onNavigate={onNavigate} icon={LockKeyhole} />
+        </>
+      }
+    />
+  );
+}
 
-      <PageSection
-        eyebrow="Core"
-        title="Feature Set"
-        description="uZephyr is built for agency rather than one-shot chatting. The current hybrid stack combines persistent memory, autonomous workflows, modular tools, and operator-visible safety controls."
-      >
-        <div className="grid gap-space-md lg:grid-cols-2">
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Hybrid Memory</h3>
-            <BulletList
-              items={[
-                "Session history is persisted in the local SQLite runtime store so web and CLI turns can restore recent context.",
-                "Semantic and keyword search use the local vector store and keyword index under the data directory for search-backed retrieval.",
-                "The knowledge brain under knowledge/brain remains the durable place for project facts, truth notes, and persona context.",
-              ]}
-            />
-          </article>
-
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Autonomous Missions</h3>
-            <BulletList
-              items={[
-                "Mission turns are objective-driven and run through the same shared runtime used by standard chat.",
-                "The hybrid UI streams mission progress snapshots so operators can inspect milestones before the final persisted answer lands.",
-                "Browser verification remains bounded, while the CLI /verify path is still the full fallback for heavier regression work.",
-              ]}
-            />
-          </article>
-
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Skills & MCP</h3>
-            <BulletList
-              items={[
-                "Native Python skills live under skills/ and are hot-reloadable through the shared runtime reload path.",
-                "MCP inventory, discovery freshness, degraded reasons, and recent execution results surface in the command center.",
-                "Reloading tools updates the shared backend services rather than rebuilding separate web-only logic.",
-              ]}
-            />
-          </article>
-
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Privacy & Safety</h3>
-            <BulletList
-              items={[
-                "Ollama and LlamaCPP keep inference local, while OpenRouter is surfaced clearly as a remote-capable provider.",
-                "Safety confirmation can remain in the loop for sensitive tool execution when REQUIRE_CONFIRMATION is enabled.",
-                "The Posture and Activity views expose privacy boundaries, runtime trust, readiness state, and current operational constraints in one place.",
-              ]}
-            />
-          </article>
-        </div>
-      </PageSection>
-
-      <PageSection
-        eyebrow="Architecture"
-        title="Three-Layer Runtime"
-        description="The hybrid app is intentionally split so the UI stays responsive while Python keeps ownership of execution, persistence, tools, and validation."
-      >
-        <div className="grid gap-space-md lg:grid-cols-3">
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Control Room</h3>
-            <BulletList
-              items={[
-                "React + Vite frontend with router-driven paths for Chat, Command Center, Posture, Activity, and the shell documentation pages.",
-                "Consumes REST snapshots plus Server-Sent Events for chat, missions, reload, and prepare actions.",
-                "Serves as the primary operator surface while the terminal remains the explicit fallback path.",
-              ]}
-            />
-          </article>
-
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Bridge</h3>
-            <BulletList
-              items={[
-                "FastAPI backend exposes system, runtime, session, chat, mission, and command-center endpoints over the shared runtime.",
-                "Session restore and passive status snapshots avoid forcing heavy runtime boot when a lightweight answer is enough.",
-                "Runtime services own streaming responses, preparation flows, and verification orchestration for the browser. ",
-              ]}
-            />
-          </article>
-
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Core Runtime</h3>
-            <BulletList
-              items={[
-                "AppRuntime owns memory, tools, LLM routing, background warm-up, and post-turn deferred search refresh scheduling.",
-                "LLMRouter tracks provider readiness plus recent warm-up and live-call timings for operational visibility.",
-                "Chat, missions, tool execution, and MCP integration all run through the same Python-owned execution layer.",
-              ]}
-            />
-          </article>
-        </div>
-      </PageSection>
-
-      <PageSection
-        eyebrow="Workflows"
-        title="Advanced Use"
-        description="The most useful extension and ingestion paths stay local and repo-driven."
-      >
-        <div className="grid gap-space-md lg:grid-cols-2">
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Create a Skill</h3>
-            <BulletList
-              items={[
-                "Add a Python skill under skills/ using the existing module pattern and a clear docstring or function description.",
-                "Use Reload tools from the shell or the runtime reload path to make the new capability available without restarting the full stack.",
-                "Prefer import-safe skill modules so missing optional dependencies degrade cleanly instead of polluting the tool inventory.",
-              ]}
-            />
-          </article>
-
-          <article className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-md">
-            <h3 className="text-base font-semibold text-primary">Knowledge & Search</h3>
-            <BulletList
-              items={[
-                "Place markdown or other supported content under the workspace and knowledge directories you want the search runtime to index.",
-                "Use Prepare Runtime when local model assets or search warm-up still need to settle.",
-                "The shared retriever combines semantic and keyword results instead of falling back to a UI-only search path.",
-              ]}
-            />
-          </article>
-        </div>
-      </PageSection>
-
-      <PageSection eyebrow="Config" title="Common Environment Settings">
-        <Table
-          rows={[
-            ["LLM_PROVIDER", "Select the active inference backend.", "ollama"],
-            ["REQUIRE_CONFIRMATION", "Require browser approval before sensitive tool execution.", "false"],
-            ["MCP_ENABLED", "Enable MCP server configuration and discovery.", "false"],
-            ["EXTERNAL_SUBPROCESS_INTEGRATIONS_ENABLED", "Allow optional subprocess-backed integrations.", "false"],
-            ["DB_PATH", "Location of the local SQLite runtime database.", "./data/zephyr.db"],
-            ["VECTOR_STORE_DIR", "Location of the local semantic vector store.", "./data/vector_store"],
-          ]}
-        />
-      </PageSection>
-
-      <PageSection eyebrow="Requirements" title="System Baseline">
-        <BulletList
-          items={[
-            "Python 3.10+ for the shared backend runtime and async-first services.",
-            "Node.js 18+ for the React control room and frontend build pipeline.",
-            "Enough local RAM and storage for your selected inference provider, runtime assets, and vector/search indexes.",
-          ]}
-        />
-      </PageSection>
-    </div>
+export function GlossaryPage({ onNavigate }: NavigationPageProps) {
+  return (
+    <MarkdownDocumentPage
+      slug="glossary"
+      eyebrow="Glossary"
+      fallbackTitle="uZephyr Shared Vocabulary"
+      fallbackSubtitle="Loading the glossary directly from Docs/glossary.md."
+      icon={Search}
+      actions={
+        <>
+          <ActionLink label="Docs" view="docs" onNavigate={onNavigate} icon={BookOpen} />
+          <ActionLink label="API Docs" view="api-docs" onNavigate={onNavigate} icon={FileCode2} />
+        </>
+      }
+    />
   );
 }
 
@@ -448,88 +320,27 @@ export function ProfilePage({ status, sessionId, onNavigate }: NavigationPagePro
 
 export function TermsPage({ onNavigate }: NavigationPageProps) {
   return (
-    <div className="space-y-6">
-      <WorkspaceHeader
-        eyebrow="Terms"
-        title="Terms of Service"
-        subtitle="Updated May 18, 2026. These terms focus on user responsibility for a self-hosted, local-first operator tool."
-        icon={Shield}
-        actions={<ActionLink label="Privacy Policy" view="privacy" onNavigate={onNavigate} icon={LockKeyhole} />}
-      />
-
-      <PageSection title="Use of Software">
-        <BulletList
-          items={[
-            "uZephyr is provided as an open-source tool for personal and professional use.",
-            "You are responsible for the environment in which it is deployed and the data it can access.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="AI Output Disclaimer">
-        <BulletList
-          items={[
-            "uZephyr can interface with local or remote LLM providers.",
-            "Generated content, tool plans, and autonomous mission outputs are not guaranteed to be accurate, safe, or reliable without operator review.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="Responsibility for Actions">
-        <BulletList
-          items={[
-            "If REQUIRE_CONFIRMATION is disabled, the runtime may execute local file, shell, or integration-backed actions without an extra approval click.",
-            "You accept responsibility for any data loss, system damage, or unintended side effects that result from the way the software is configured and used.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="Limitation of Liability">
-        <BulletList
-          items={[
-            "The software is provided as-is without warranty of any kind.",
-            "In no event shall the authors or contributors be liable for claims, damages, or other liability arising from use of the software.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="License">
-        <p className="text-sm leading-6 text-text-muted">Usage remains governed by the MIT License included in this repository.</p>
-      </PageSection>
-    </div>
+    <MarkdownDocumentPage
+      slug="terms"
+      eyebrow="Terms"
+      fallbackTitle="Terms of Service"
+      fallbackSubtitle="Loading the current terms directly from Docs/TERMS.md."
+      icon={Shield}
+      actions={<ActionLink label="Privacy Policy" view="privacy" onNavigate={onNavigate} icon={LockKeyhole} />}
+    />
   );
 }
 
 export function PrivacyPage({ status, onNavigate }: NavigationPageProps) {
   return (
-    <div className="space-y-6">
-      <WorkspaceHeader
-        eyebrow="Privacy"
-        title="Privacy Policy"
-        subtitle="uZephyr is built with a local-first posture. This page summarizes what stays on your machine and what can leave it depending on provider and integration settings."
-        icon={LockKeyhole}
-        actions={<ActionLink label="Terms" view="terms" onNavigate={onNavigate} icon={Shield} />}
-      />
-
-      <PageSection title="Data Residency">
-        <BulletList
-          items={[
-            "Chat history, vector indexes, keyword indexes, logs, and durable knowledge files are stored in local workspace-controlled paths by default.",
-            "The current repo does not include built-in telemetry or third-party analytics in the hybrid operator surface.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="Third-Party Providers">
-        <BulletList
-          items={[
-            "Ollama and LlamaCPP keep inference local to your machine.",
-            "When OpenRouter is enabled, prompts and tool context can be sent to that remote provider according to your configuration.",
-            "Optional MCP and subprocess-backed integrations can also extend the runtime beyond the local machine when explicitly enabled.",
-          ]}
-        />
-      </PageSection>
-
+    <MarkdownDocumentPage
+      slug="privacy"
+      eyebrow="Privacy"
+      fallbackTitle="Privacy Policy"
+      fallbackSubtitle="Loading the privacy policy directly from Docs/PRIVACY.md."
+      icon={LockKeyhole}
+      actions={<ActionLink label="Terms" view="terms" onNavigate={onNavigate} icon={Shield} />}
+    >
       <PageSection title="Live Privacy Posture">
         <KeyValueGrid
           items={[
@@ -540,74 +351,19 @@ export function PrivacyPage({ status, onNavigate }: NavigationPageProps) {
           ]}
         />
       </PageSection>
-
-      <PageSection title="Security Note">
-        <p className="text-sm leading-6 text-text-muted">
-          The runtime includes sandbox-backed execution paths, but it is still a local operator tool with filesystem and command capabilities. Run it only in environments you trust.
-        </p>
-      </PageSection>
-    </div>
+    </MarkdownDocumentPage>
   );
 }
 
 export function ApiDocsPage({ onNavigate }: NavigationPageProps) {
   return (
-    <div className="space-y-6">
-      <WorkspaceHeader
-        eyebrow="API"
-        title="FastAPI Bridge Reference"
-        subtitle="Reference for the current local backend bridge exposed by the hybrid app. Default local base URL: http://127.0.0.1:8000."
-        icon={FileCode2}
-        actions={<ActionLink label="System Docs" view="docs" onNavigate={onNavigate} icon={BookOpen} />}
-      />
-
-      <PageSection title="System Endpoints">
-        <BulletList
-          items={[
-            "GET /api/system/health returns a lightweight backend health response.",
-            "GET /api/system/status returns the current runtime snapshot, including provider readiness, inference timings, startup guidance, trust posture, and tool counts.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="Runtime Endpoints">
-        <BulletList
-          items={[
-            "POST /api/runtime/reload reloads tool definitions and refreshes background search state.",
-            "POST /api/runtime/reload/stream streams runtime reload progress as Server-Sent Events.",
-            "POST /api/runtime/prepare prepares local runtime assets and returns a final preparation payload.",
-            "POST /api/runtime/prepare/stream streams preparation progress as Server-Sent Events.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="Sessions, Chat, and Missions">
-        <BulletList
-          items={[
-            "POST /api/sessions creates a web session identifier.",
-            "GET /api/sessions/{session_id}/messages returns recent persisted messages for the session.",
-            "POST /api/chat/turn accepts { session_id, message, allow_sensitive_tools? } and returns one persisted assistant response.",
-            "POST /api/chat/stream accepts the same body and returns Server-Sent Event snapshots plus a final done event.",
-            "POST /api/missions/turn and POST /api/missions/stream use the same request body shape for persisted mission execution and mission progress streaming.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="Command Center Endpoints">
-        <BulletList
-          items={[
-            "GET /api/command-center/overview returns CLI-equivalent web inspection data for tools, MCP, memory, and commands.",
-            "POST /api/command-center/mcp/refresh refreshes cached MCP discovery without reloading the full runtime.",
-            "POST /api/command-center/verify runs the browser-facing runtime verification workflow.",
-          ]}
-        />
-      </PageSection>
-
-      <PageSection title="Authentication & Exposure">
-        <p className="text-sm leading-6 text-text-muted">
-          The current backend is designed for local-host access and does not ship with a global auth layer. If you expose it beyond the local machine, add your own reverse proxy, VPN, or comparable access control.
-        </p>
-      </PageSection>
-    </div>
+    <MarkdownDocumentPage
+      slug="api-docs"
+      eyebrow="API"
+      fallbackTitle="FastAPI Bridge Reference"
+      fallbackSubtitle="Loading the API reference directly from Docs/API_DOCS.md."
+      icon={FileCode2}
+      actions={<ActionLink label="System Docs" view="docs" onNavigate={onNavigate} icon={BookOpen} />}
+    />
   );
 }

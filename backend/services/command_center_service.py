@@ -7,8 +7,11 @@ from backend.schemas.command_center import (
     CommandCenterOverviewResponse,
     CommandReferenceResponse,
     DurableMemoryResponse,
+    MCPConfigurationApplyRequest,
+    MCPConfigurationApplyResponse,
     RuntimeVerificationResponse,
 )
+from backend.services.mcp_configuration_service import MCPConfigurationService
 from backend.services.command_center_runtime_service import CommandCenterRuntimeService
 from backend.services.command_center_verification_service import CommandCenterVerificationService
 from core.mission_service import MissionService
@@ -21,6 +24,7 @@ class CommandCenterService:
     def __init__(self) -> None:
         self._runtime_service = CommandCenterRuntimeService()
         self._verification_service = CommandCenterVerificationService()
+        self._mcp_configuration_service = MCPConfigurationService()
 
     async def get_overview(self) -> CommandCenterOverviewResponse:
         runtime = await ensure_memory_ready()
@@ -31,6 +35,29 @@ class CommandCenterService:
         if runtime.tool_engine is not None:
             await runtime.tool_engine.refresh_mcp_tools()
         return await self._build_overview(runtime)
+
+    async def apply_mcp_configuration(self, payload: MCPConfigurationApplyRequest) -> MCPConfigurationApplyResponse:
+        applied = self._mcp_configuration_service.apply(payload)
+
+        existing_runtime = get_runtime()
+        runtime_was_initialized = existing_runtime.tool_engine is not None and existing_runtime.llm is not None
+        runtime = await ensure_runtime_ready()
+        if runtime_was_initialized and runtime.tool_engine is not None:
+            await runtime.tool_engine.reload_mcp_runtime()
+
+        server_count = applied.server_count
+        server_label = "server" if server_count == 1 else "servers"
+        return MCPConfigurationApplyResponse(
+            message=(
+                f"Saved {server_count} MCP {server_label} to {applied.env_path.name} using {applied.format} format "
+                "and refreshed the live runtime configuration."
+            ),
+            env_path=str(applied.env_path),
+            env_block=applied.env_block,
+            format=payload.format,
+            server_count=server_count,
+            overview=await self._build_overview(runtime),
+        )
 
     async def _build_overview(self, runtime: object) -> CommandCenterOverviewResponse:
         facts_blob = await runtime.memory.get_durable_facts()

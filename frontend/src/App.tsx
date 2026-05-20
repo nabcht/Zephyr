@@ -11,6 +11,7 @@ import { CommandCenterPage } from "./views/CommandCenterPage";
 import {
   ApiDocsPage,
   DocsPage,
+  GlossaryPage,
   PrivacyPage,
   ProfilePage,
   SettingsPage,
@@ -33,6 +34,8 @@ function resolveViewFromPath(pathname: string): AppView | null {
       return "chat";
     case "/docs":
       return "docs";
+    case "/glossary":
+      return "glossary";
     case "/support":
       return "support";
     case "/command-center":
@@ -62,6 +65,8 @@ function pathForView(view: AppView): string {
       return "/chat";
     case "docs":
       return "/docs";
+    case "glossary":
+      return "/glossary";
     case "support":
       return "/support";
     case "command-center":
@@ -107,21 +112,28 @@ export default function App() {
     error: commandCenterError,
     isLoading: isCommandCenterLoading,
     isRefreshingMcp,
+    isApplyingMcp,
     isVerifying,
     refresh: refreshCommandCenter,
     refreshMcpDiscovery,
+    applyMcpConfiguration,
     verifyRuntime,
   } = useCommandCenter();
   const {
     sessionId,
     messages,
+    attachments,
     error: chatError,
     isBootstrapping,
     isSending,
     isRunningMission,
+    isUploadingAttachments,
+    deletingAttachmentId,
     createSession,
     sendMessage,
     runMission,
+    uploadAttachments,
+    deleteAttachment,
   } = useChatSession(status?.safety_confirmation_required ?? false);
 
   const resolvedView = resolveViewFromPath(location.pathname);
@@ -193,6 +205,9 @@ export default function App() {
     case "docs":
       pageContent = <DocsPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
       break;
+    case "glossary":
+      pageContent = <GlossaryPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
     case "support":
       pageContent = <SupportPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
       break;
@@ -204,9 +219,11 @@ export default function App() {
           error={commandCenterError}
           isLoading={isCommandCenterLoading}
           isRefreshingMcp={isRefreshingMcp}
+          isApplyingMcp={isApplyingMcp}
           isVerifying={isVerifying}
           onRefresh={refreshCommandCenter}
           onRefreshMcp={refreshMcpDiscovery}
+          onApplyMcp={applyMcpConfiguration}
           onVerify={verifyRuntime}
         />
       );
@@ -257,13 +274,24 @@ export default function App() {
         <ChatPage
           sessionId={sessionId}
           messages={messages}
+          attachments={attachments}
+          commandCenterOverview={overview}
           error={chatError}
           isBootstrapping={isBootstrapping}
           isSending={isSending}
           isRunningMission={isRunningMission}
+          isUploadingAttachments={isUploadingAttachments}
+          deletingAttachmentId={deletingAttachmentId}
+          commands={overview?.commands ?? []}
           onNewSession={createSession}
           onSendMessage={sendMessage}
           onRunMission={runMission}
+          onUploadAttachments={uploadAttachments}
+          onDeleteAttachment={deleteAttachment}
+          onRefreshMcp={refreshMcpDiscovery}
+          onReloadTools={handleReloadTools}
+          onPrepareRuntime={handlePrepareRuntime}
+          onVerifyRuntime={verifyRuntime}
         />
       );
       break;

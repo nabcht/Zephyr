@@ -14,7 +14,21 @@ import {
   Wrench,
 } from "lucide-react";
 
-import type { CommandCenterOverview, MCPServerStatus, MCPToolExecution, RuntimeVerification, ToolCatalogEntry } from "../types/api";
+import { McpSetupWalkthrough } from "./McpSetupWalkthrough";
+import {
+  categorizeToolCatalogEntry,
+  sortToolCatalogEntries,
+  TOOL_CATALOG_CATEGORY_DEFINITIONS,
+} from "../toolCatalog";
+import type {
+  CommandCenterOverview,
+  MCPConfigurationApplyRequest,
+  MCPConfigurationApplyResponse,
+  MCPServerStatus,
+  MCPToolExecution,
+  RuntimeVerification,
+  ToolCatalogEntry,
+} from "../types/api";
 
 interface CommandCenterPanelProps {
   overview: CommandCenterOverview | null;
@@ -22,9 +36,11 @@ interface CommandCenterPanelProps {
   error: string | null;
   isLoading: boolean;
   isRefreshingMcp: boolean;
+  isApplyingMcp: boolean;
   isVerifying: boolean;
   onRefresh: () => Promise<void>;
   onRefreshMcp: () => Promise<void>;
+  onApplyMcp: (payload: MCPConfigurationApplyRequest) => Promise<MCPConfigurationApplyResponse>;
   onVerify: () => Promise<void>;
 }
 
@@ -37,9 +53,11 @@ export function CommandCenterPanel({
   error,
   isLoading,
   isRefreshingMcp,
+  isApplyingMcp,
   isVerifying: _isVerifying,
   onRefresh: _onRefresh,
   onRefreshMcp,
+  onApplyMcp,
   onVerify: _onVerify,
 }: CommandCenterPanelProps) {
   function commandIcon(command: string) {
@@ -79,6 +97,11 @@ export function CommandCenterPanel({
       return Wrench;
     }
     return Command;
+  }
+
+  function visibleToolTags(tool: ToolCatalogEntry) {
+    const nonGeneralTags = tool.tags.filter((tag) => tag.toLowerCase() !== "general");
+    return nonGeneralTags.length ? nonGeneralTags : tool.tags.slice(0, 1);
   }
 
   function verificationLines(): string[] {
@@ -180,6 +203,88 @@ export function CommandCenterPanel({
       return execution.structured_content_preview;
     }
     return execution.display_text;
+  }
+
+  function mcpCatalogSummary(server: MCPServerStatus) {
+    if (server.degraded_reason) {
+      return server.degraded_reason;
+    }
+
+    const discoveryAge = relativeTimeLabel(server.last_discovered_at);
+    if (discoveryAge) {
+      return `Inventory refreshed ${discoveryAge}.`;
+    }
+
+    if (server.connected) {
+      return "Connected with no cached discovery snapshot yet.";
+    }
+
+    return "Awaiting the first successful discovery refresh.";
+  }
+
+  const allTools = overview?.tools ?? [];
+  const mcpServers = overview?.mcp.servers ?? [];
+  const toolsByMcpServer = new Map<string, ToolCatalogEntry[]>();
+  const serverNameByToolName = new Map<string, string>();
+
+  for (const server of mcpServers) {
+    toolsByMcpServer.set(server.name, []);
+    for (const toolName of server.discovered_tools) {
+      serverNameByToolName.set(toolName, server.name);
+    }
+  }
+
+  const categorizedTools = new Map(
+    TOOL_CATALOG_CATEGORY_DEFINITIONS.map((section) => [section.id, [] as ToolCatalogEntry[]]),
+  );
+  const unassignedMcpTools: ToolCatalogEntry[] = [];
+
+  for (const tool of allTools) {
+    if (tool.source === "mcp") {
+      const serverName = serverNameByToolName.get(tool.name);
+      if (serverName) {
+        toolsByMcpServer.get(serverName)?.push(tool);
+      } else {
+        unassignedMcpTools.push(tool);
+      }
+      continue;
+    }
+
+    categorizedTools.get(categorizeToolCatalogEntry(tool))?.push(tool);
+  }
+
+  const sectionIcons = {
+    "code-generation": TerminalSquare,
+    memory: Database,
+    core: Command,
+  } as const;
+
+  const toolCatalogSections = TOOL_CATALOG_CATEGORY_DEFINITIONS.map((section) => ({
+    ...section,
+    key: section.id,
+    icon: sectionIcons[section.id],
+    tools: sortToolCatalogEntries(categorizedTools.get(section.id) ?? []),
+  }));
+
+  const mcpToolSections: Array<{
+    key: string;
+    server: MCPServerStatus | null;
+    title: string;
+    tools: ToolCatalogEntry[];
+  }> = mcpServers.map((server) => ({
+    key: server.name,
+    server,
+    title: server.name,
+    tools: sortToolCatalogEntries(toolsByMcpServer.get(server.name) ?? []),
+  }));
+
+  if (unassignedMcpTools.length) {
+    mcpToolSections.push({
+      key: "unassigned-mcp",
+      server: null,
+      title: "Unassigned MCP",
+      tools: sortToolCatalogEntries(unassignedMcpTools),
+    });
   }
 
   return (
@@ -328,6 +433,14 @@ export function CommandCenterPanel({
         </article>
       </div>
 
+      <McpSetupWalkthrough
+        overview={overview?.mcp ?? null}
+        isRefreshingMcp={isRefreshingMcp}
+        isApplyingMcp={isApplyingMcp}
+        onRefreshMcp={onRefreshMcp}
+        onApplyMcp={onApplyMcp}
+      />
+
       <article className="rounded-xl border border-border-subtle bg-surface-container-lowest p-space-md">
         <div className="flex items-center justify-between border-b border-border-subtle pb-space-sm">
           <h2 className="flex items-center gap-space-sm text-xl font-semibold text-primary">
@@ -336,26 +449,151 @@ export function CommandCenterPanel({
           </h2>
           <span className="font-mono text-xs uppercase tracking-[0.18em] text-text-muted">{overview?.tools.length ?? 0} tools</span>
         </div>
-        <div className="mt-space-md grid gap-space-md grid-cols-2 md:grid-cols-4">
-          {overview?.tools.length ? (
-            overview.tools.map((tool) => {
-              const Icon = toolIcon(tool);
-              return (
-                <article key={`${tool.source}-${tool.name}`} className="flex flex-col items-center justify-center gap-space-sm rounded border border-border-subtle p-space-sm text-center transition-colors hover:border-primary">
-                  <Icon className="h-8 w-8 text-primary" />
-                  <div className="text-sm font-semibold text-primary">{tool.name}</div>
-                  <div className="rounded bg-surface-container px-2 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
-                    {tool.source_label}
+        {overview?.tools.length ? (
+          <>
+            <div className="mt-space-md grid gap-space-md xl:grid-cols-3">
+              {toolCatalogSections.map((section) => {
+                const SectionIcon = section.icon;
+                return (
+                  <article key={section.key} className="rounded-xl border border-border-subtle bg-background p-space-md">
+                    <div className="flex items-start justify-between gap-space-sm border-b border-border-subtle pb-space-sm">
+                      <div className="flex items-start gap-space-sm">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-container text-primary">
+                          <SectionIcon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-semibold text-primary">{section.title}</h3>
+                          <p className="mt-1 text-sm leading-6 text-text-muted">{section.description}</p>
+                        </div>
+                      </div>
+                      <span className="rounded bg-surface-container px-2 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
+                        {section.tools.length}
+                      </span>
+                    </div>
+
+                    <div className="mt-space-md max-h-96 overflow-y-auto pr-1">
+                      {section.tools.length ? (
+                        <div className="grid gap-space-sm">
+                          {section.tools.map((tool) => {
+                            const Icon = toolIcon(tool);
+                            return (
+                              <article
+                                key={`${section.key}-${tool.source}-${tool.name}`}
+                                title={tool.description}
+                                className="rounded-lg border border-border-subtle bg-surface-container-lowest p-space-sm transition-colors hover:border-primary"
+                              >
+                                <div className="flex items-start gap-space-sm">
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-container text-primary">
+                                    <Icon className="h-4 w-4" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="truncate text-sm font-semibold text-primary">{tool.name}</div>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      <span className="rounded bg-surface-container px-2 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
+                                        {tool.source_label}
+                                      </span>
+                                      {visibleToolTags(tool).map((tag) => (
+                                        <span
+                                          key={`${tool.name}-${tag}`}
+                                          className="rounded bg-surface-container px-2 py-1 text-[11px] uppercase tracking-[0.18em] text-text-muted"
+                                        >
+                                          {tag}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm leading-6 text-text-muted">{section.emptyMessage}</p>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+
+            <article className="mt-space-md rounded-xl border border-border-subtle bg-background p-space-md">
+              <div className="flex items-start justify-between gap-space-sm border-b border-border-subtle pb-space-sm">
+                <div className="flex items-start gap-space-sm">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-container text-primary">
+                    <PlugZap className="h-5 w-5" />
                   </div>
-                </article>
-              );
-            })
-          ) : (
-            <p className="col-span-full text-sm text-text-muted">
-              {isLoading ? "Loading tool inventory..." : "No tools are currently visible to the web command center."}
-            </p>
-          )}
-        </div>
+                  <div>
+                    <h3 className="text-base font-semibold text-primary">MCP Tools</h3>
+                    <p className="mt-1 text-sm leading-6 text-text-muted">
+                      Remote tool inventories grouped by MCP server so each integration stays isolated in its own pane.
+                    </p>
+                  </div>
+                </div>
+                <span className="rounded bg-surface-container px-2 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
+                  {allTools.filter((tool) => tool.source === "mcp").length}
+                </span>
+              </div>
+
+              <div className="mt-space-md grid gap-space-md xl:grid-cols-2">
+                {mcpToolSections.length ? (
+                  mcpToolSections.map((section) => (
+                    <article key={section.key} className="rounded-xl border border-border-subtle bg-surface-container-lowest p-space-md">
+                      <div className="flex items-start justify-between gap-space-sm border-b border-border-subtle pb-space-sm">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {section.server ? <span className={`h-2.5 w-2.5 rounded-full ${mcpStateDot(section.server)}`} /> : null}
+                            <h4 className="truncate text-sm font-semibold uppercase tracking-[0.18em] text-primary">{section.title}</h4>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-text-muted">
+                            {section.server ? mcpCatalogSummary(section.server) : "MCP tools visible to the runtime that are not tied to a live server snapshot."}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          {section.server ? (
+                            <span className="rounded bg-surface-container px-2 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
+                              {mcpStateLabel(section.server)}
+                            </span>
+                          ) : null}
+                          <span className="rounded bg-surface-container px-2 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">
+                            {section.tools.length} tools
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-space-md max-h-96 overflow-y-auto pr-1">
+                        {section.tools.length ? (
+                          <div className="flex flex-wrap gap-2">
+                            {section.tools.map((tool) => (
+                              <div
+                                key={`${section.key}-${tool.name}`}
+                                title={tool.description}
+                                className="rounded-lg border border-border-subtle bg-background px-3 py-2 text-sm font-medium text-primary transition-colors hover:border-primary"
+                              >
+                                {tool.name}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-6 text-text-muted">
+                            {section.server
+                              ? "No tools are currently visible for this MCP server. Run Refresh MCP discovery after the server is ready."
+                              : "No unassigned MCP tools are currently visible."}
+                          </p>
+                        )}
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <p className="text-sm leading-6 text-text-muted">No MCP tools are currently visible to the web command center.</p>
+                )}
+              </div>
+            </article>
+          </>
+        ) : (
+          <p className="mt-space-md text-sm text-text-muted">
+            {isLoading ? "Loading tool inventory..." : "No tools are currently visible to the web command center."}
+          </p>
+        )}
       </article>
 
       <article className="rounded-xl border border-primary bg-primary p-space-md text-white shadow-sm">

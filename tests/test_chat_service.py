@@ -4,6 +4,7 @@ import unittest
 
 from core.app_runtime import ChatContext
 from core.chat_service import ChatService
+from core.llm import StreamedTurnCancelled
 
 
 class _FakeMemory:
@@ -23,13 +24,24 @@ class _FakeLLM:
         yield "reply"
 
 
-class _FakeRuntime:
-    def __init__(self) -> None:
-        self.memory = _FakeMemory()
-        self.llm = _FakeLLM()
-        self.deferred_refresh_starts = 0
+class _CancelledStreamingLargeLanguageModel:
+    async def chat(self, **kwargs: object) -> str:
+        return "reply"
 
-    async def build_chat_context(self, session_id: str, *, history_limit: int = 20) -> ChatContext:
+    async def chat_stream_gui(self, *args: object, **kwargs: object):
+        yield "partial"
+        raise StreamedTurnCancelled()
+
+
+class _FakeRuntime:
+    def __init__(self, large_language_model: object | None = None) -> None:
+        self.memory = _FakeMemory()
+        self.llm = large_language_model or _FakeLLM()
+        self.deferred_refresh_starts = 0
+        self.last_context_request: tuple[str, str, int] | None = None
+
+    async def build_chat_context(self, session_id: str, *, user_message: str = "", history_limit: int = 20) -> ChatContext:
+        self.last_context_request = (session_id, user_message, history_limit)
         return ChatContext(history=[], system_prompt="system")
 
     def require_llm(self) -> _FakeLLM:
@@ -49,6 +61,7 @@ class ChatServiceDeferredRefreshTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response, "reply")
         self.assertEqual(runtime.deferred_refresh_starts, 1)
+        self.assertEqual(runtime.last_context_request, ("session", "hello", 20))
         self.assertEqual(
             runtime.memory.messages,
             [
@@ -65,11 +78,27 @@ class ChatServiceDeferredRefreshTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(chunks, ["working", "reply"])
         self.assertEqual(runtime.deferred_refresh_starts, 1)
+        self.assertEqual(runtime.last_context_request, ("session", "hello", 20))
         self.assertEqual(
             runtime.memory.messages,
             [
                 ("session", "user", "hello"),
                 ("session", "assistant", "reply"),
+            ],
+        )
+
+    async def test_stream_turn_skips_persisting_partial_reply_after_cancellation(self) -> None:
+        runtime = _FakeRuntime(large_language_model=_CancelledStreamingLargeLanguageModel())
+        service = ChatService(runtime)
+
+        chunks = [chunk async for chunk in service.stream_turn("session", "hello")]
+
+        self.assertEqual(chunks, ["partial"])
+        self.assertEqual(runtime.deferred_refresh_starts, 0)
+        self.assertEqual(
+            runtime.memory.messages,
+            [
+                ("session", "user", "hello"),
             ],
         )
 

@@ -29,6 +29,21 @@ class ToolEngineSchemaTests(unittest.TestCase):
 
         self.assertEqual(names, ["universal_tool"])
 
+    def test_compact_provider_schema_flag_is_forwarded_to_registry(self) -> None:
+        engine = ToolEngine(_FakeMemory())
+        engine.register(
+            lambda search_text: search_text,
+            name="search_repository",
+            description="Search the repository for matching files and symbols. Use this for repository lookups.",
+        )
+
+        compact_schema = engine.get_openai_tool_schemas(compact_for_provider=True)[0]
+
+        self.assertNotIn(
+            "description",
+            compact_schema["function"]["parameters"]["properties"]["search_text"],
+        )
+
 
 class ToolEngineExecutionTests(unittest.IsolatedAsyncioTestCase):
     async def test_execute_runs_sync_tool(self) -> None:

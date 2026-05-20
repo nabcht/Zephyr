@@ -72,6 +72,34 @@ Accepts the same request body shape and streams mission progress snapshots over 
 
 Returns CLI-equivalent web inspection data for tools, MCP state, memory, and commands.
 
+### `POST /api/command-center/mcp/apply`
+
+Persists walkthrough-generated MCP settings into the repo `.env`, updates the live backend process, and returns the refreshed Command Center overview.
+
+Accepts:
+
+```json
+{
+  "format": "single",
+  "enable_mcp": true,
+  "enable_external_integrations": true,
+  "servers": [
+    {
+      "name": "archive",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://example.com/mcp"],
+      "env": {
+        "API_KEY": "demo-token"
+      },
+      "cwd": null,
+      "tool_prefix": "mcp"
+    }
+  ]
+}
+```
+
+Use `format: "single"` for one server, `format: "indexed"` for `MCP_SERVER_1_*` style output, or `format: "json"` for `MCP_SERVERS_JSON`.
+
 ### `POST /api/command-center/mcp/refresh`
 
 Refreshes cached MCP discovery without reloading the full runtime.

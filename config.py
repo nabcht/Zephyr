@@ -128,6 +128,7 @@ VECTOR_STORE_DIR = _env_path("VECTOR_STORE_DIR", DATA_DIR / "vector_store")
 KEYWORD_INDEX_DIR = _env_path("KEYWORD_INDEX_DIR", DATA_DIR / "keyword_index")
 SCENARIOS_FILE = _env_path("SCENARIOS_FILE", DATA_DIR / "scenarios.json")
 EMBEDDING_MODEL_DIR = _env_path("EMBEDDING_MODEL_DIR", PROJECT_ROOT / "LLM" / "vector-models")
+SESSION_ATTACHMENTS_DIR = _env_path("SESSION_ATTACHMENTS_DIR", PROJECT_ROOT / "temp_core" / "attachments")
 
 LLM_PROVIDER = _normalize_provider(_env_str("LLM_PROVIDER", "ollama"))
 OLLAMA_BASE_URL = _env_str("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
@@ -209,6 +210,7 @@ for directory in (
 	VECTOR_STORE_DIR,
 	KEYWORD_INDEX_DIR,
 	EMBEDDING_MODEL_DIR,
+	SESSION_ATTACHMENTS_DIR,
 	LLAMACPP_MODEL_PATH.parent,
 ):
 	directory.mkdir(parents=True, exist_ok=True)

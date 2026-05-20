@@ -32,6 +32,14 @@ function formatMetricMs(value: number | null | undefined): string {
   return `${value.toFixed(1)} ms`;
 }
 
+function formatCount(value: number | null | undefined): string {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "--";
+  }
+
+  return String(value);
+}
+
 function readinessPanelClasses(value: string): string {
   const lowered = value.toLowerCase();
   if (lowered.includes("ready")) {
@@ -169,13 +177,49 @@ export function ActivityPage({
               </div>
               <div>
                 <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">Provider Warm-up</div>
-                <div className="mt-1 text-2xl font-semibold text-primary">{formatMetricMs(status?.inference_metrics?.last_warmup_ms)}</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{formatMetricMs(status?.inference_metrics?.last_warmup_milliseconds)}</div>
                 <div className="mt-1 text-xs leading-5 text-text-muted">{status?.inference_metrics?.last_warmup_outcome ?? "not_run"}</div>
               </div>
               <div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">First Response Token</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{formatMetricMs(status?.inference_metrics?.first_response_token_milliseconds)}</div>
+                <div className="mt-1 text-xs leading-5 text-text-muted">{status?.inference_metrics?.first_response_token_outcome ?? "not_run"}</div>
+              </div>
+              <div>
                 <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">Last Provider Call</div>
-                <div className="mt-1 text-2xl font-semibold text-primary">{formatMetricMs(status?.inference_metrics?.last_completion_ms)}</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{formatMetricMs(status?.inference_metrics?.last_completion_milliseconds)}</div>
                 <div className="mt-1 text-xs leading-5 text-text-muted">{status?.inference_metrics?.last_completion_outcome ?? "not_run"}</div>
+              </div>
+              <div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">Payload Size</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{formatCount(status?.provider_payload_metrics?.serialized_payload_characters)}</div>
+                <div className="mt-1 text-xs leading-5 text-text-muted">Serialized provider payload characters.</div>
+              </div>
+              <div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">History Messages</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{formatCount(status?.provider_payload_metrics?.history_message_count)}</div>
+                <div className="mt-1 text-xs leading-5 text-text-muted">Prior conversation messages included in the first provider request.</div>
+              </div>
+              <div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">Provider Messages</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{formatCount(status?.provider_payload_metrics?.provider_message_count)}</div>
+                <div className="mt-1 text-xs leading-5 text-text-muted">Total messages sent in the first provider request.</div>
+              </div>
+              <div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">Tool Schemas</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">{formatCount(status?.provider_payload_metrics?.tool_schema_count)}</div>
+                <div className="mt-1 text-xs leading-5 text-text-muted">Function-calling tool schemas included with the first provider request.</div>
+              </div>
+              <div>
+                <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-muted">Lightweight Payload</div>
+                <div className="mt-1 text-2xl font-semibold text-primary">
+                  {status?.provider_payload_metrics?.used_lightweight_payload_strategy == null
+                    ? "--"
+                    : status.provider_payload_metrics.used_lightweight_payload_strategy
+                      ? "Yes"
+                      : "No"}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-text-muted">Whether the first provider request skipped tool schemas and prior history.</div>
               </div>
             </div>
 

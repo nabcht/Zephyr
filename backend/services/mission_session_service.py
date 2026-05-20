@@ -30,11 +30,13 @@ class MissionSessionService:
         allow_sensitive_tools: bool | None = None,
     ) -> ChatTurnResponse:
         runtime = await ensure_runtime_ready()
+        attachment_context = await runtime.build_session_attachment_context(session_id, message)
         mission_service = MissionService(runtime, get_backend_console())
         response = await mission_service.run_turn(
             session_id,
             message,
             allow_sensitive_tools=self._resolve_sensitive_tool_approval(allow_sensitive_tools),
+            session_attachment_context=attachment_context,
         )
         return ChatTurnResponse(session_id=session_id, response=response)
 
@@ -48,11 +50,13 @@ class MissionSessionService:
         yield self._initial_progress_snapshot(message)
 
         runtime = await ensure_runtime_ready()
+        attachment_context = await runtime.build_session_attachment_context(session_id, message)
         mission_service = MissionService(runtime, get_backend_console())
         async for chunk in mission_service.stream_turn(
             session_id,
             message,
             allow_sensitive_tools=self._resolve_sensitive_tool_approval(allow_sensitive_tools),
+            session_attachment_context=attachment_context,
         ):
             yield chunk
 

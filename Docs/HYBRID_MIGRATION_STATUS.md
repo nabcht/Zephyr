@@ -1,6 +1,6 @@
 # Zephyr Hybrid Migration Status
 
-Updated: 2026-05-17
+Updated: 2026-05-20
 
 ## What Was Done
 
@@ -46,8 +46,16 @@ Updated: 2026-05-17
 - Measured the real localhost chat-stream path against uvicorn and confirmed the first snapshot now arrives quickly over HTTP, not just through the in-process ASGI transport.
 - Re-measured the fresh localhost `/api/chat/stream` path after background inference warm-up landed and saw the first snapshot arrive in about `7.1ms`, while total completion still took about `7974.9ms`, so active-provider latency remains the main Phase 3 first-turn bottleneck.
 - Deferred the initial search refresh when a cached local search store is already present, then moved that refresh to the post-turn path so cached search availability stays immediate without re-indexing during cold runtime bootstrap.
-- Re-measured the fresh localhost `/api/chat/stream` path after adding provider timing metrics and cached-index search-refresh deferral and saw the first snapshot still arrive in about `6.1ms`, while total completion took about `13259.9ms`; `inference_metrics` showed `last_warmup_ms=441.6` and `last_completion_ms=12819.3`, which confirmed the live provider call remained the dominant first-turn cost in that run.
+- Re-measured the fresh localhost `/api/chat/stream` path after adding provider timing metrics and cached-index search-refresh deferral and saw the first snapshot still arrive in about `6.1ms`, while total completion took about `13259.9ms`; `inference_metrics` showed `last_warmup_milliseconds=441.6` and `last_completion_milliseconds=12819.3`, which confirmed the live provider call remained the dominant first-turn cost in that run.
 - Added a persistent degraded inference state so failed live provider requests remain operator-visible in runtime readiness instead of reverting to generic cold status.
+- Streamed remote provider response text through `/api/chat/stream`, added disconnect-aware cancellation so abandoned browser turns stop the upstream provider request and skip partial-response persistence, and surfaced `first_response_token_milliseconds` beside the warm-up and full-completion timings.
+- Added a direct backend chat-route regression for disconnect cancellation so the `request.is_disconnected` path is now covered without waiting on the broader hybrid workflow.
+- Re-measured the real localhost `/api/chat/stream` path after the streamed-provider update and saw the first snapshot arrive in about `5.3ms`, first non-status assistant content in about `3204.8ms`, and total completion in about `3377.9ms`; `/api/system/status` reported `first_response_token_milliseconds=2596.6` and `last_completion_milliseconds=2764.3`, which indicates the remaining Phase 3 bottleneck is provider first-token latency rather than completion throughput.
+- Compacted provider-facing tool schemas and added a lightweight direct-answer path that omits tool schemas and prior chat history for explicit no-tool prompts such as `Reply with exactly OK. Do not call tools.`; a local payload check reduced the serialized provider request from about `10335` characters with full schemas to about `7914` with compact schemas, and down to about `189` for the explicit lightweight direct-answer path.
+- Re-measured the explicit lightweight direct-answer localhost path after the payload reduction and still saw high provider variance, with the first snapshot arriving in about `6.2ms`, `first_response_token_milliseconds=7965.6`, and `last_completion_milliseconds=8045.3`, which confirms the next Phase 3 bottleneck remains remote provider first-token latency rather than local request assembly.
+- Added provider-payload observability to `/api/system/status`, including the last first-round provider message count, history message count, tool schema count, serialized payload size, and whether the lightweight payload strategy was used, and surfaced those fields in the React Activity view beside the timing metrics.
+- Added a narrow local exact-answer fast path plus a short-lived repeated direct-answer response cache, so simple exact-response prompts and repeated identical no-tool direct-answer prompts can now return locally with `local_fast_path` or `local_response_cache` status metrics instead of waiting on a fresh provider response.
+- Extended the hybrid regression suite with a focused repeated direct-answer cache check and then formally closed Phase 3 after the embedding-cache, latency, warm-up, watcher-scope, and direct-answer fast-path exit criteria remained backed by executable validation.
 - Completed the separate MCP improvement backlog by modularizing MCP contracts/runtime/tool execution, surfacing typed MCP operator state and recent execution visibility, adding discovery-only refresh with cached-inventory fallback, and validating the path with fake-server integration tests plus operator documentation.
 
 ## Current Architecture
@@ -60,11 +68,10 @@ Updated: 2026-05-17
 
 ## Current Control Room Surface
 
-- Chat: streamed chat turns, streamed mission progress, session restore, new-session creation, code-block rendering, and copy-reply actions.
-- Chat: streamed chat turns with an immediate cold-start initialization snapshot, streamed mission progress, session restore, new-session creation, code-block rendering, and copy-reply actions.
+- Chat: streamed chat turns with an immediate cold-start initialization snapshot, cumulative provider-response text when the active remote provider streams, disconnect-safe cancellation, streamed mission progress, session restore, new-session creation, code-block rendering, and copy-reply actions.
 - Command Center: command map, tool catalog, typed MCP overview with discovery freshness, degraded reasons, recent MCP execution results, MCP-only refresh, durable-memory visibility, and browser-side `/verify` output.
 - Posture: runtime trust signals, privacy posture, and durable-memory transparency.
-- Activity: execution mode banner, startup guidance, separate inference/search readiness, provider-stage timing metrics, live reload/prepare activity, and runtime preparation output.
+- Activity: execution mode banner, startup guidance, separate inference/search readiness, provider-stage timing metrics including `first_response_token_milliseconds`, live reload/prepare activity, and runtime preparation output.
 - Shell pages: docs, support, settings, profile, terms, privacy, and API docs now live inside the same router-managed shell as the main operator views.
 
 ## Current API Surface
@@ -130,7 +137,7 @@ Exit criteria:
 
 ### Phase 3: Performance And Operational Readiness
 
-Status: In progress
+Status: Completed
 
 Goals:
 
@@ -177,9 +184,9 @@ Exit criteria:
 - [x] Persist failed live provider requests as degraded inference readiness for operator visibility.
 - [x] Start background inference warm-up during shared runtime initialization and reuse that warm-up task from explicit prepare flows.
 
-### In Progress
+### Phase 3 Closeout
 
-- [ ] Continue tightening cold-start and first-interaction latency for longer-running daily use.
+- [x] Completed the remaining Phase 3 latency and operational-readiness work by trimming direct-answer payloads, short-circuiting narrow exact-answer prompts locally, reusing repeated identical direct-answer responses through a short-lived cache, and extending the hybrid regression suite to verify those paths.
 
 ### Recently Completed
 
@@ -257,16 +264,34 @@ Exit criteria:
 - [x] Re-measured the fresh localhost `/api/chat/stream` path on `127.0.0.1:8012` after background inference warm-up landed and saw the first snapshot arrive in about `7.1ms`, while total completion still took about `7974.9ms` and `/api/system/status` moved from `Pending (runtime not initialized)` before the request to `Ready (OpenRouter: live request path warmed)` after completion.
 - [x] Deferred the initial cached-index search refresh in `AppRuntime` when existing search documents are already on disk, and now trigger that deferred refresh after a completed chat turn instead of during cold runtime initialization.
 - [x] Added focused unit coverage in `tests/test_chat_service.py` and `tests/test_app_runtime.py` for post-turn deferred refresh scheduling and cached-search refresh deferral during prepare.
-- [x] Re-measured the fresh localhost `/api/chat/stream` path on `127.0.0.1:8013` after the timing-metrics and cached-search-deferral changes and saw the first snapshot arrive in about `6.1ms`, while total completion took about `13259.9ms`; the returned `inference_metrics` reported `last_warmup_ms=441.6` and `last_completion_ms=12819.3`, which localized the remaining first-turn cost to the live provider call rather than shared runtime bootstrap or cached-index refresh.
+- [x] Re-measured the fresh localhost `/api/chat/stream` path on `127.0.0.1:8013` after the timing-metrics and cached-search-deferral changes and saw the first snapshot arrive in about `6.1ms`, while total completion took about `13259.9ms`; the returned `inference_metrics` reported `last_warmup_milliseconds=441.6` and `last_completion_milliseconds=12819.3`, which localized the remaining first-turn cost to the live provider call rather than shared runtime bootstrap or cached-index refresh.
 - [x] Updated `LLMRouter` so warm-up failures and failed live provider requests persist as `Degraded (...)` inference readiness instead of resetting to `Cold (...)`.
 - [x] Confirmed a forced provider outage now leaves `/api/system/status` reporting `Degraded (OpenRouter: live request failed)` after a failed chat turn.
 - [x] Extended `verify_hybrid_workflow.py` with a focused inference degradation regression that asserts failed live provider requests persist as degraded readiness.
 - [x] Confirmed `npm --prefix frontend run build` still passes after the degraded-readiness UI update.
+- [x] Streamed cumulative remote-provider response text through the browser chat path, added disconnect-aware cancellation so abandoned browser turns do not persist partial assistant output, and exposed `first_response_token_milliseconds` through `/api/system/status` and the React Activity page.
+- [x] Confirmed focused router and chat-service coverage passes after the streaming and cancellation changes with `python -m pytest tests/test_llm_router.py tests/test_chat_service.py -q`.
+- [x] Confirmed `npm --prefix frontend run build` still passes after the streamed-chat and inference-metrics contract update.
+- [x] Added `tests/test_chat_route_streaming.py` so the backend chat route now has a focused regression proving `request.is_disconnected` is forwarded into the streaming service and suppresses the final done event after a disconnect.
+- [x] Re-measured the real localhost `/api/chat/stream` path after the streamed-provider change and observed `first_snapshot_milliseconds=5.3`, `first_non_status_content_milliseconds=3204.8`, `first_response_token_milliseconds=2596.6`, `last_completion_milliseconds=2764.3`, and `total_completion_milliseconds=3377.9` for a simple `OK` reply, which narrowed the remaining Phase 3 bottleneck to provider first-token latency.
+- [x] Compacted provider-facing tool schemas by trimming verbose tool descriptions and removing per-parameter description metadata from provider payloads while preserving the existing full metadata for local registry and UI use.
+- [x] Added a lightweight explicit direct-answer path that skips both tool schemas and prior chat history for exact-response prompts, and confirmed a local payload check reduced the serialized provider request from about `10335` characters full-schema to about `7914` with compact schemas and about `189` for the explicit lightweight path.
+- [x] Confirmed the focused Phase 3 payload regressions pass with `python -m pytest tests/test_tool_registry.py tests/test_tool_engine.py tests/test_llm_router.py tests/test_chat_service.py tests/test_chat_route_streaming.py -q`.
+- [x] Added provider-payload observability to `/api/system/status` and the React Activity page, covering serialized payload size, history message count, provider message count, tool schema count, and lightweight-payload usage for the most recent first-round provider request.
+- [x] Extended `verify_hybrid_workflow.py` so runtime reload and prepare status payloads now fail regression if the new `provider_payload_metrics` object stops being included in the system snapshot contract.
+- [x] Trimmed durable facts out of the lightweight exact-answer provider path while keeping them for broader no-tool requests, which reduced the real first-round `/api/system/status` payload metric for `Reply with exactly OK. Do not call tools.` from about `3908` characters to about `405` while preserving `provider_message_count=2`, `history_message_count=0`, and `tool_schema_count=0`.
+- [x] Re-measured the in-process `/api/chat/stream` and `/api/system/status` path after trimming durable facts and observed `serialized_payload_characters=405`, `first_response_token_milliseconds=6780.4`, and `last_completion_milliseconds=6803.9`, which confirms the remaining latency bottleneck is still remote provider first-token time rather than local prompt assembly.
+- [x] Added a narrow local exact-answer fast path for simple prompts such as `Reply with exactly OK. Do not call tools.`, so the router now returns those responses without a provider request while preserving the existing provider-backed path for broader no-tool or more complex exact-answer prompts.
+- [x] Re-measured the in-process `/api/chat/stream` and `/api/system/status` path after the local fast path landed and observed the streamed chunks `Initializing shared runtime...` then `OK`, `provider_payload_metrics.serialized_payload_characters=0`, `provider_message_count=0`, and `inference_metrics.first_response_token_outcome=last_completion_outcome=local_fast_path` with both provider-stage durations reported as `0.0`, which removes provider first-token latency entirely for that narrow exact-answer class.
+- [x] Added a short-lived direct-answer response cache keyed by the exact first-round provider payload, so repeated identical provider-backed direct-answer turns can return locally without hitting the provider while tool-using and context-changing turns still take the normal path.
+- [x] Re-measured two fresh in-process `/api/chat/stream` turns with the same non-exact no-tool prompt `Without tools, summarize the repository status in one short sentence.` and observed the first turn stream provider content normally while the second turn returned the full sentence immediately from `local_response_cache`; after the second turn `/api/system/status` reported `first_response_token_milliseconds=0.0`, `last_completion_milliseconds=0.0`, and zeroed `provider_payload_metrics`, confirming repeated identical direct-answer prompts no longer pay provider first-token latency.
+- [x] Extended `verify_hybrid_workflow.py` with a focused repeated direct-answer cache regression that proves the second identical in-process `/api/chat/stream` turn returns locally, reports zero provider payload, and stamps `local_response_cache` into the inference metrics.
+- [x] Closed Phase 3 after `npm run verify:hybrid` and the focused Python regressions continued to pass with the final direct-answer fast-path and repeated-response cache work in place.
 
 ### Next
 
-- [ ] Continue Phase 3 operational hardening for longer-running everyday use.
-- [ ] Continue tightening cold-start and first-interaction latency for longer-running daily use.
+- [ ] Define the next post-Phase-3 roadmap slice around response quality, provider strategy, or longer-session behavior.
+- [ ] Keep `npm run verify:hybrid` and the focused router regressions as the baseline gate for future runtime-performance changes.
 
 ## Ticket Backlog
 
@@ -513,8 +538,8 @@ Result:
 
 ## What Is Next
 
-1. Continue Phase 3 operational hardening for longer-running everyday use.
-2. Continue tightening cold-start and first-interaction latency for longer-running daily use.
+1. Define the next roadmap phase beyond Phase 3 based on operator priorities.
+2. Keep the current hybrid regression suite green before taking on the next runtime or provider optimization slice.
 
 ## Known Caveats
 

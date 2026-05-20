@@ -5,11 +5,15 @@ from __future__ import annotations
 import inspect
 import logging
 from dataclasses import dataclass, field
+import re
 from typing import Any, Callable, get_args, get_origin, get_type_hints
 
 from core.tool_executor import tool_is_allowed
 
 log = logging.getLogger("uzephyr.tool_registry")
+
+_SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+")
+_PROVIDER_TOOL_DESCRIPTION_MAXIMUM_LENGTH = 140
 
 _TYPE_MAP: dict[type, str] = {
     str: "string",
@@ -94,6 +98,8 @@ class ToolRegistry:
     def get_openai_tool_schemas(
         self,
         allowed_tags: list[str] | None = None,
+        *,
+        compact_for_provider: bool = False,
     ) -> list[dict[str, Any]]:
         """Return OpenAI-compatible function-calling schemas for registered tools."""
         schemas: list[dict[str, Any]] = []
@@ -101,17 +107,76 @@ class ToolRegistry:
             if not tool_is_allowed(tool_def, allowed_tags):
                 continue
 
+            tool_description = tool_def.description
+            tool_parameters = tool_def.parameters
+            if compact_for_provider:
+                tool_description = self._compact_tool_description(tool_description)
+                tool_parameters = self._compact_parameter_schema(tool_parameters)
+
             schemas.append(
                 {
                     "type": "function",
                     "function": {
                         "name": tool_def.name,
-                        "description": tool_def.description,
-                        "parameters": tool_def.parameters,
+                        "description": tool_description,
+                        "parameters": tool_parameters,
                     },
                 }
             )
         return schemas
+
+    @staticmethod
+    def _compact_tool_description(description: str) -> str:
+        collapsed_description = " ".join(description.split())
+        if not collapsed_description:
+            return "No description."
+
+        first_sentence = _SENTENCE_BOUNDARY_RE.split(collapsed_description, maxsplit=1)[0].strip()
+        if first_sentence:
+            candidate_description = first_sentence
+        else:
+            candidate_description = collapsed_description
+
+        if len(candidate_description) <= _PROVIDER_TOOL_DESCRIPTION_MAXIMUM_LENGTH:
+            return candidate_description
+
+        trimmed_description = candidate_description[: _PROVIDER_TOOL_DESCRIPTION_MAXIMUM_LENGTH - 1].rstrip()
+        return f"{trimmed_description}…"
+
+    @classmethod
+    def _compact_parameter_schema(cls, schema: dict[str, Any]) -> dict[str, Any]:
+        compact_schema: dict[str, Any] = {}
+        for key, value in schema.items():
+            if key in {"description", "title", "examples", "default"}:
+                continue
+
+            if key == "properties" and isinstance(value, dict):
+                compact_schema[key] = {
+                    property_name: cls._compact_parameter_schema(property_schema)
+                    if isinstance(property_schema, dict)
+                    else property_schema
+                    for property_name, property_schema in value.items()
+                }
+                continue
+
+            if key == "items" and isinstance(value, dict):
+                compact_schema[key] = cls._compact_parameter_schema(value)
+                continue
+
+            if isinstance(value, dict):
+                compact_schema[key] = cls._compact_parameter_schema(value)
+                continue
+
+            if isinstance(value, list):
+                compact_schema[key] = [
+                    cls._compact_parameter_schema(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
+                continue
+
+            compact_schema[key] = value
+
+        return compact_schema
 
     @staticmethod
     def _params_from_signature(fn: Callable[..., Any]) -> dict[str, Any]:

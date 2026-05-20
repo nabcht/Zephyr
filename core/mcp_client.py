@@ -530,4 +530,5 @@ def _utc_now_iso() -> str:
 async def _await_with_timeout(awaitable: Awaitable[T], *, timeout_seconds: float | None) -> T:
     if timeout_seconds is None or timeout_seconds <= 0:
         return await awaitable
-    return await asyncio.wait_for(awaitable, timeout=timeout_seconds)
+    async with asyncio.timeout(timeout_seconds):
+        return await awaitable
