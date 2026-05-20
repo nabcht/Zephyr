@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Currently, the `main` branch of μZephyr is the actively maintained line and receives security fixes.
+Currently, the `main` branch of Zephyr is the actively maintained line and receives security fixes.
 
 | Version | Supported          |
 | ------- | ------------------ |
