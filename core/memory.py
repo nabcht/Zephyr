@@ -14,7 +14,7 @@ import config
 from core import linker
 from core.archive import ArchiveBridge
 
-log = logging.getLogger("uzephyr.memory")
+log = logging.getLogger("zephyr.memory")
 
 
 class MemoryManager:

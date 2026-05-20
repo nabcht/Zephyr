@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-log = logging.getLogger("uzephyr.markdown_parser")
+log = logging.getLogger("zephyr.markdown_parser")
 
 # Extensions handled by each parser
 _TEXT_EXTENSIONS: set[str] = {

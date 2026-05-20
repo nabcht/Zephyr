@@ -9,11 +9,13 @@ from backend.schemas.command_center import (
     DurableMemoryResponse,
     MCPConfigurationApplyRequest,
     MCPConfigurationApplyResponse,
+    MemoryBrainRepairResponse,
     RuntimeVerificationResponse,
 )
 from backend.services.mcp_configuration_service import MCPConfigurationService
 from backend.services.command_center_runtime_service import CommandCenterRuntimeService
 from backend.services.command_center_verification_service import CommandCenterVerificationService
+from core.memory_repair import rebuild_memory_brain_from_memories
 from core.mission_service import MissionService
 from skills.skill_loader import SkillLoader
 
@@ -56,6 +58,40 @@ class CommandCenterService:
             env_block=applied.env_block,
             format=payload.format,
             server_count=server_count,
+            overview=await self._build_overview(runtime),
+        )
+
+    async def repair_memory_brain(self) -> MemoryBrainRepairResponse:
+        repaired = rebuild_memory_brain_from_memories()
+        runtime = await ensure_memory_ready()
+
+        entry_label = "entry" if repaired.raw_fact_count == 1 else "entries"
+        duplicate_summary = (
+            f" {repaired.duplicate_count} duplicate(s) skipped during rebuild."
+            if repaired.duplicate_count
+            else ""
+        )
+        backup_summary = (
+            f" Preserved {len(repaired.backup_paths)} backup file(s) before rewriting the brain artifacts."
+            if repaired.backup_paths
+            else ""
+        )
+
+        return MemoryBrainRepairResponse(
+            message=(
+                "Rebuilt timeline.log, truth.md, and entity backlinks from "
+                f"{repaired.raw_fact_count} durable memory {entry_label}; restored {repaired.fact_count} unique fact(s) "
+                f"across {repaired.entity_file_count} entity file(s)."
+                f"{duplicate_summary}{backup_summary}"
+            ),
+            raw_fact_count=repaired.raw_fact_count,
+            fact_count=repaired.fact_count,
+            duplicate_count=repaired.duplicate_count,
+            timeline_line_count=repaired.timeline_line_count,
+            entity_file_count=repaired.entity_file_count,
+            timeline_path=str(repaired.timeline_path),
+            truth_path=str(repaired.truth_path),
+            backup_paths=[str(path) for path in repaired.backup_paths],
             overview=await self._build_overview(runtime),
         )
 

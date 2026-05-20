@@ -1,118 +1,59 @@
-This is a comprehensive `README_FOR_AI.md` designed specifically to guide an AI agent (like GPT-4, Claude 3.5, or GitHub Copilot) through the process of transforming the **uZephyr** repository into a Python + React hybrid application integrated with **Google’s design.md**.
+# Zephyr AI Contributor Brief
 
----
+This file describes the current state of the repository for coding agents and AI contributors. The hybrid migration is already complete; this is no longer a scaffolding brief.
 
-# README_FOR_AI.md
+## Current Project Shape
 
-## 1. Project Overview
-**Project Name:** uZephyr Hybrid (uZephyr-H)
-**Core Objective:** Transform the existing `uZephyr` codebase into a full-stack hybrid application. The backend will be powered by **Python (FastAPI)**, the frontend by **React (Vite)**, and the UI/UX design system will be governed by **Google’s design.md** specifications.
+- `core/` is the shared runtime and remains the primary ownership layer for memory, tools, search, chat orchestration, and mission orchestration.
+- `backend/` is the FastAPI bridge. Keep route handlers thin and prefer backend services for request/response assembly.
+- `frontend/` is the primary interface. It uses React, TypeScript, typed API shapes, and route-managed pages.
+- `Docs/` is the canonical documentation set for product, operator, and policy docs.
 
-## 2. Technology Stack
-*   **Backend:** Python 3.10+ (FastAPI)
-*   **Frontend:** React 18 (Vite, TypeScript)
-*   **Design Framework:** Google Design.md (for component documentation and specs)
-*   **Communication:** REST API / WebSockets (for real-time uZephyr data)
-*   **Styling:** Tailwind CSS (mapped to Design.md tokens)
-*   **Packaging:** Docker (optional) or Poetry (Python) + NPM (React)
+## Current Runtime Facts
 
-## 3. Desired Folder Structure
-```text
-uZephyr/
-├── backend/                # Python FastAPI logic
-│   ├── main.py             # Entry point
-│   ├── api/                # Endpoints
-│   ├── core/               # uZephyr logic/bindings
-│   └── requirements.txt
-├── frontend/               # React application
-│   ├── src/
-│   │   ├── components/     # UI Components based on design.md
-│   │   ├── hooks/          # API integration
-│   │   └── App.tsx
-│   ├── design.md           # Google Designer Integration File
-│   └── package.json
-├── docs/
-│   └── design_system/      # Google Designer specific docs
-└── README_FOR_AI.md        # This instruction file
-```
+- The browser UI is the default interface; the CLI is the fallback/operator surface.
+- `core/app_runtime.py` owns subsystem lifecycle for both CLI and backend callers.
+- `core/chat_service.py` and `core/mission_service.py` are the shared turn-orchestration layers.
+- Search warm-up and inference warm-up are deliberately staged so passive status paths stay lightweight.
+- Session attachments are now part of the live product and are indexed locally for session-scoped retrieval.
 
-## 4. Integration Roadmap
+## Implementation Rules For AI Contributors
 
-### Phase 1: Environment Setup
-1.  Initialize a Python virtual environment in `/backend`.
-2.  Initialize a Vite React (TypeScript) project in `/frontend`.
-3.  Install `fastapi`, `uvicorn` in Python.
-4.  Install `tailwindcss`, `lucide-react` (for icons) in React.
+1. Prefer extending the shared runtime or backend services instead of duplicating logic between CLI and browser codepaths.
+2. Keep `backend/api/routes/` focused on transport and schema concerns; move behavior into `backend/services/` or `core/`.
+3. Keep `frontend/src/types/api.ts` aligned with backend schemas whenever API payloads change.
+4. Check `frontend/design.md` before making visual changes; it is the current design-token source of truth.
+5. Update `Docs/` when user-visible features, pages, routes, or workflows change.
 
-### Phase 2: Design.md Integration (Google Designer)
-1.  **Ingestion:** Read the `design.md` file from the root/frontend.
-2.  **Implementation:** AI must parse the `design.md` specs (colors, typography, spacing) and translate them into a `tailwind.config.js` file.
-3.  **Component Mapping:** Every React component generated must reference a section in `design.md`.
+## Current Browser Surfaces
 
-### Phase 3: Backend Bridge (uZephyr to Python)
-1.  Expose the existing `uZephyr` logic (C++/specific functionality) via Python bindings (using `ctypes`, `cffi`, or `pybind11`) if necessary.
-2.  Create FastAPI routes to serve data from the uZephyr core to the frontend.
+- `Chat`: streaming chat, mission launch, slash commands, attachments.
+- `Command Center`: tool inventory, MCP state, MCP configuration, verification.
+- `Posture`: privacy and trust reporting.
+- `Activity`: runtime metrics and live runtime-action streams.
+- auxiliary pages: docs, glossary, support, settings, profile, privacy, terms, API docs.
 
-### Phase 4: Frontend Development
-1.  Build a dashboard layout using React.
-2.  Implement "Design-First" components:
-    *   Create a `DesignWrapper` that follows Google’s layout specs.
-    *   Use Tailwind classes that match the `design.md` tokens.
+## High-Value Validation Commands
 
-### Phase 5: Hybrid Connectivity
-1.  Configure Vite Proxy to route `/api` calls to the FastAPI server (default: `localhost:8000`).
-2.  Implement State Management (Zustand or React Context) to handle uZephyr's state.
+- `npm run build:frontend`
+- `npm run verify:command-center`
+- `npm run verify:hybrid`
+- focused `python -m unittest ...` runs in `tests/`
 
----
+## Common Pitfalls
 
-## 5. AI Agent Instructions (Execution Rules)
+- Do not force heavy runtime bootstrap from passive status-style routes.
+- Do not duplicate the active user message into history before building prompt context.
+- Keep skill modules import-safe even when optional dependencies are missing.
+- Preserve the browser disconnect behavior that avoids persisting partial streamed chat output.
 
-When generating code for this project, follow these strict rules:
+## When Docs Must Change
 
-1.  **Design Compliance:** Before writing any React component, check `frontend/design.md`. If a component (e.g., "Button") is defined there, use the exact padding, color tokens, and border-radius specified.
-2.  **Type Safety:** Always use TypeScript for the frontend. Define interfaces for all API responses coming from the Python backend.
-3.  **Modular Python:** Keep FastAPI routes clean. Use a `services/` directory in the backend to handle the actual uZephyr logic, keeping `api/` only for request/response handling.
-4.  **Component Documentation:** For every React component created, add a JSDoc comment linking it to the corresponding `design.md` section.
-5.  **Hybrid Workflow:** 
-    *   If the user asks for a feature, provide both the Python FastAPI endpoint and the React `fetch` logic/Component UI in the same response.
-    *   Ensure the Python backend includes CORS middleware to allow the React frontend to communicate during development.
+Update the documentation set when any of the following changes:
 
----
-
-## 6. Implementation Step-by-Step for AI
-
-### Step 1: Initialize Backend
-```python
-# Create backend/main.py
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-app = FastAPI(title="uZephyr Hybrid API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/")
-def read_root():
-    return {"status": "uZephyr Online"}
-```
-
-### Step 2: Initialize Frontend with design.md
-*   Create `frontend/design.md` based on [Google Labs design.md](https://github.com/google-labs-code/design.md).
-*   Define a core theme in `design.md`.
-*   Generate `tailwind.config.js` to match these definitions.
-
-### Step 3: Link uZephyr Core
-*   Identify the main entry point of the original uZephyr code.
-*   Create a Python wrapper (`backend/core/zephyr_wrapper.py`) that executes or interacts with the original logic.
-
-### Step 4: Final Assembly
-*   Create a startup script `run_app.sh` that starts both the FastAPI server and the Vite dev server concurrently.
-
----
-
-**Note to AI:** You are now the lead architect. Start by analyzing the current `uZephyr` files and suggest the first set of Python bindings needed to expose its functionality to a web interface.
+- API routes or payloads
+- browser page behavior
+- slash-command behavior
+- attachment handling
+- MCP configuration workflow
+- runtime preparation, verification, or operator visibility surfaces

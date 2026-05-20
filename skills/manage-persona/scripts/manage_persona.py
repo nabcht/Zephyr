@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import config
 
-log = logging.getLogger("uzephyr.manage_persona")
+log = logging.getLogger("zephyr.manage_persona")
 
 async def update_agent_role(role: str, system_prompt_markdown: str) -> str:
     """

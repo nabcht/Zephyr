@@ -97,6 +97,19 @@ class MCPConfigurationApplyResponse(BaseModel):
     overview: CommandCenterOverviewResponse
 
 
+class MemoryBrainRepairResponse(BaseModel):
+    message: str
+    raw_fact_count: int
+    fact_count: int
+    duplicate_count: int
+    timeline_line_count: int
+    entity_file_count: int
+    timeline_path: str
+    truth_path: str
+    backup_paths: list[str] = Field(default_factory=list)
+    overview: CommandCenterOverviewResponse
+
+
 class RuntimeVerificationResponse(BaseModel):
     valid_skills: list[str] = Field(default_factory=list)
     repaired_skills: list[str] = Field(default_factory=list)

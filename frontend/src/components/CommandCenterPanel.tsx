@@ -22,6 +22,7 @@ import {
 } from "../toolCatalog";
 import type {
   CommandCenterOverview,
+  MemoryBrainRepair,
   MCPConfigurationApplyRequest,
   MCPConfigurationApplyResponse,
   MCPServerStatus,
@@ -33,15 +34,18 @@ import type {
 interface CommandCenterPanelProps {
   overview: CommandCenterOverview | null;
   verification: RuntimeVerification | null;
+  memoryRepair: MemoryBrainRepair | null;
   error: string | null;
   isLoading: boolean;
   isRefreshingMcp: boolean;
   isApplyingMcp: boolean;
   isVerifying: boolean;
+  isRepairingMemory: boolean;
   onRefresh: () => Promise<void>;
   onRefreshMcp: () => Promise<void>;
   onApplyMcp: (payload: MCPConfigurationApplyRequest) => Promise<MCPConfigurationApplyResponse>;
   onVerify: () => Promise<void>;
+  onRepairMemory: () => Promise<MemoryBrainRepair>;
 }
 
 /**
@@ -50,15 +54,18 @@ interface CommandCenterPanelProps {
 export function CommandCenterPanel({
   overview,
   verification,
+  memoryRepair,
   error,
   isLoading,
   isRefreshingMcp,
   isApplyingMcp,
   isVerifying: _isVerifying,
+  isRepairingMemory,
   onRefresh: _onRefresh,
   onRefreshMcp,
   onApplyMcp,
   onVerify: _onVerify,
+  onRepairMemory,
 }: CommandCenterPanelProps) {
   function commandIcon(command: string) {
     if (command.includes("verify")) {
@@ -432,6 +439,52 @@ export function CommandCenterPanel({
           </div>
         </article>
       </div>
+
+      <article className="rounded-xl border border-border-subtle bg-surface-container-lowest p-space-md">
+        <div className="flex flex-col gap-space-md lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <h2 className="flex items-center gap-space-sm text-xl font-semibold text-primary">
+              <Database className="h-5 w-5" />
+              Imported Memory Recovery
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-text-muted">
+              Rebuild timeline.log, truth.md, and entity backlinks from the current knowledge/memories.md import when the
+              truth layer is missing, stale, or corrupted after migrating memory from another project snapshot.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void onRepairMemory()}
+            disabled={isRepairingMemory}
+            className="inline-flex items-center justify-center gap-2 rounded border border-border-subtle px-4 py-3 text-xs font-medium uppercase tracking-[0.18em] text-text-muted transition hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RotateCcw className={`h-4 w-4 ${isRepairingMemory ? "animate-spin" : ""}`} />
+            {isRepairingMemory ? "Repairing" : "Repair Imported Memory"}
+          </button>
+        </div>
+
+        {memoryRepair ? (
+          <div className="mt-space-md rounded-xl border border-emerald-200 bg-emerald-50 p-space-md text-sm leading-6 text-emerald-950">
+            <p>{memoryRepair.message}</p>
+            <div className="mt-space-sm flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.18em] text-emerald-800">
+              <span className="rounded bg-white/70 px-2 py-1">{memoryRepair.fact_count} unique facts</span>
+              <span className="rounded bg-white/70 px-2 py-1">{memoryRepair.timeline_line_count} timeline lines</span>
+              <span className="rounded bg-white/70 px-2 py-1">{memoryRepair.entity_file_count} entity files</span>
+              <span className="rounded bg-white/70 px-2 py-1">{memoryRepair.duplicate_count} duplicates skipped</span>
+              <span className="rounded bg-white/70 px-2 py-1">{memoryRepair.backup_paths.length} backups</span>
+            </div>
+            <div className="mt-space-sm space-y-2 font-mono text-xs text-emerald-900/80">
+              <div>timeline: {memoryRepair.timeline_path}</div>
+              <div>truth: {memoryRepair.truth_path}</div>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-space-md text-sm leading-6 text-text-muted">
+            Use this recovery action after importing an older memories.md snapshot that does not bring forward a valid
+            timeline.log or truth.md.
+          </p>
+        )}
+      </article>
 
       <McpSetupWalkthrough
         overview={overview?.mcp ?? null}

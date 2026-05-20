@@ -1,1 +1,1 @@
-"""Backend-side wrappers for the existing uZephyr core."""
+"""Backend-side wrappers for the existing Zephyr core."""

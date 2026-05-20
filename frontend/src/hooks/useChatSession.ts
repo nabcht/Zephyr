@@ -10,7 +10,7 @@ import type {
   SessionMessage,
 } from "../types/api";
 
-const SESSION_STORAGE_KEY = "uzephyr.activeSessionId";
+const SESSION_STORAGE_KEY = "zephyr.activeSessionId";
 
 interface UseChatSessionResult {
   sessionId: string | null;

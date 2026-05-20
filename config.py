@@ -151,27 +151,30 @@ EMBEDDING_MODEL_NAME = _env_str("EMBEDDING_MODEL_NAME", "sentence-transformers/a
 MAX_CONTEXT_TOKENS = _env_int("MAX_CONTEXT_TOKENS", 4000)
 CHUNK_WORDS = _env_int("CHUNK_WORDS", 220)
 CHUNK_OVERLAP = _env_int("CHUNK_OVERLAP", 40)
-INDEX_IGNORE_PATTERNS = tuple(
-	_env_list(
-		"INDEX_IGNORE_PATTERNS",
-		[
-			".git",
-			"__pycache__",
-			"node_modules",
-			"venv",
-			".venv",
-			".pytest_cache",
-			".mypy_cache",
-			".ruff_cache",
-			"vector_store",
-			"keyword_index",
-			"LLM",
-			"logs",
-			"backups",
-			"temp_core",
-		],
-	)
-)
+# Add or update this in your config.py file
+INDEX_IGNORE_PATTERNS = [
+    # 🚨 CRITICAL: Folders written to at runtime (Prevents Infinite Loops)
+    "data",               # Safely bypasses ChromaDB, Whoosh, and SQLite updates
+    "logs",               # Safely bypasses continuous log writing 
+    "temp_core",          # Safely bypasses incoming session attachments
+
+    # 📦 Heavy Binary / Model Storage
+    "LLM",                # Avoids scanning massive local embedding model weights
+
+    # ⚙️ Standard Environment & System Folders
+    ".git",               # Git internal tracking
+    ".venv",              # Python virtual environment
+    "venv",               # Alternative virtual environment name
+    "__pycache__",        # Python compiled bytecode cache
+    "node_modules",       # Node dependency trees if you expand the frontend
+    ".pytest_cache",      # Test suites tracking directory
+
+    # 📄 Transient System Files
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    ".DS_Store"           # macOS folder attributes
+]
 
 SANDBOX_BACKEND = _env_str("SANDBOX_BACKEND", "auto").lower()
 SANDBOX_DOCKER_IMAGE = _env_str("SANDBOX_DOCKER_IMAGE", "python:3.11-slim")
@@ -192,7 +195,7 @@ AGENCY_ROLES = tuple(_env_list("AGENCY_ROLES", ["Supervisor", "Researcher", "Cod
 SYSTEM_PROMPT = os.getenv(
 	"SYSTEM_PROMPT",
 	(
-		"You are uZephyr, a local-first AI sidekick for this workspace. "
+		"You are Zephyr, a local-first AI sidekick for this workspace. "
 		"Be precise, prefer grounded repository facts over guesses, use tools when they materially improve accuracy, "
 		"and state uncertainty plainly when information is missing."
 	),

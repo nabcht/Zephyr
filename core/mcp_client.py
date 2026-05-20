@@ -20,7 +20,7 @@ except ImportError:  # pragma: no cover - exercised via runtime configuration
     StdioServerParameters = None  # type: ignore[assignment]
     stdio_client = None  # type: ignore[assignment]
 
-log = logging.getLogger("uzephyr.mcp")
+log = logging.getLogger("zephyr.mcp")
 
 T = TypeVar("T")
 

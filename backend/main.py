@@ -1,4 +1,4 @@
-"""FastAPI entry point for the uZephyr hybrid backend."""
+"""FastAPI entry point for the Zephyr hybrid backend."""
 
 from __future__ import annotations
 
@@ -23,9 +23,9 @@ async def lifespan(_: FastAPI):
 def create_app() -> FastAPI:
     """Build the FastAPI application with development-friendly defaults."""
     app = FastAPI(
-        title="uZephyr Hybrid API",
+        title="Zephyr Hybrid API",
         version="0.1.0",
-        description="HTTP bridge for the existing uZephyr core runtime.",
+        description="HTTP bridge for the existing Zephyr core runtime.",
         lifespan=lifespan,
     )
 
@@ -42,7 +42,7 @@ def create_app() -> FastAPI:
 
     @app.get("/", tags=["meta"])
     async def read_root() -> dict[str, str]:
-        return {"status": "uZephyr Hybrid API online"}
+        return {"status": "Zephyr Hybrid API online"}
 
     app.include_router(api_router)
     return app

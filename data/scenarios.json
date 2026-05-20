@@ -8,7 +8,7 @@
     "validation_script": "assert \"Mission successful. Final approved output:\" in result\nassert \"board-aware\" in result"
   },
   {
-    "input_task": "Write a uZephyr skill that merges files recursively and returns the final Python source for review.",
+    "input_task": "Write a Zephyr skill that merges files recursively and returns the final Python source for review.",
     "expected_tools": [
       "write_skill",
       "run_test_in_sandbox"

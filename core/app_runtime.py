@@ -16,7 +16,7 @@ from core.memory import MemoryManager
 from core.retriever import HybridRetriever
 from core.tool_engine import ToolEngine
 
-log = logging.getLogger("uzephyr.app_runtime")
+log = logging.getLogger("zephyr.app_runtime")
 
 
 @dataclass(frozen=True, slots=True)

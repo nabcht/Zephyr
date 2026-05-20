@@ -1,224 +1,104 @@
-# uZephyr Documentation: Features and Architecture
+# Zephyr Documentation: Features and Architecture
 
-uZephyr is a local-first AI sidekick built for agency rather than one-shot chat. The current hybrid app combines a React control room, a FastAPI bridge, and a shared Python runtime that owns execution, memory, tools, and validation.
+Zephyr is a local-first AI sidekick built for agency rather than one-shot chat. The current hybrid app combines a React control room, a FastAPI bridge, and a shared Python runtime that owns execution, memory, tools, search, and validation.
 
-## Core Feature Set
+## What Ships Today
 
-### Hybrid Memory
+- The primary interface is the browser-first control room started by `run.bat` or `run-hybrid.bat`.
+- The CLI in `main.py` remains available through `run-cli.bat` and uses the same runtime services as the backend.
+- The shared runtime in `core/app_runtime.py` is the single owner of memory, tool loading, provider warm-up, and search warm-up.
+- The FastAPI bridge under `backend/` exposes stable status, runtime-action, session, chat, mission, documentation, and command-center endpoints.
+- The React frontend under `frontend/` renders the current operator surfaces: `Chat`, `Command Center`, `Posture`, `Activity`, and the auxiliary documentation pages.
 
-- Session history is stored in the local runtime database so CLI and web turns can restore recent context.
-- Semantic and keyword retrieval use the local vector store and keyword index under `data/` for search-backed answers.
-- Durable workspace knowledge lives under `knowledge/brain` and related local knowledge files.
+## Runtime Architecture
 
-### Autonomous Missions
+### Shared Runtime
 
-- Mission turns run through the same shared runtime as normal chat.
-- The hybrid UI streams intermediate mission progress before the final persisted answer is written.
-- The browser verification flow is intentionally lighter than the CLI fallback for long-running regression work.
+- `AppRuntime` initializes durable memory, tool inventory, the LLM router, and background search/inference preparation exactly once.
+- `ChatService` and `MissionService` share turn orchestration between CLI and backend callers.
+- Search warm-up is intentionally deferred so cached indexes can stay available without blocking first-load responsiveness.
 
-### Skills and MCP
+### Backend Bridge
 
-- Native Python skills live under `skills/` and can be reloaded without restarting the full stack.
-- MCP discovery, degraded state, and recent execution visibility are surfaced in the command center.
-- Shared runtime reload keeps the browser and CLI on the same tool inventory instead of maintaining separate web-only logic.
+- The backend keeps passive routes lightweight. `GET /api/system/status` reads the current snapshot without forcing a full runtime bootstrap.
+- Heavy paths such as chat turns, mission turns, and explicit runtime actions initialize the runtime only when they need it.
+- Documentation content is served directly from the `Docs/` folder through `/api/docs/{slug}` for the docs pages that render in the browser shell.
 
-### Privacy and Safety
+### React Control Room
 
-- Ollama and LlamaCPP keep inference local to the machine.
-- OpenRouter is supported as a remote provider and is surfaced clearly in the runtime privacy posture.
-- Sensitive tool approval can remain human-in-the-loop when `REQUIRE_CONFIRMATION` is enabled.
+- The browser shell is route-driven and resolves real paths such as `/chat`, `/command-center`, `/posture`, and `/activity`.
+- Chat and mission turns stream over Server-Sent Events.
+- Runtime reload and prepare actions also stream progress so the UI stays informative during longer operations.
 
-## Technical Architecture
+## Interaction Model
 
-### Control Room
+### Chat And Missions
 
-- React + Vite frontend.
-- Hash-routed operator surface for Chat, Command Center, Posture, Activity, and documentation pages.
-- Uses REST for snapshots and SSE for chat, mission, reload, and prepare streams.
+- Normal chat runs through `/api/chat/stream` and persists user and assistant turns.
+- Missions run through `/api/missions/stream` and emit structured progress snapshots before the final answer is stored.
+- If the browser disconnects during streaming chat, partial assistant output is not persisted.
 
-### Bridge
+### Browser Slash Commands
 
-- FastAPI backend under `backend/`.
-- Exposes system, runtime, sessions, chat, missions, and command-center endpoints.
-- Keeps passive status paths lightweight and delegates heavy runtime ownership to the shared Python layer.
+- Read-only slash commands such as `/help`, `/skills`, `/memory`, and `/mcp` return inline chat-style summaries inside the browser workspace.
+- Mutating slash commands such as `/prepare`, `/reload`, `/verify`, `/session`, and `/mcp refresh` reuse the existing runtime actions and then post a local summary message.
+- `/mission <task>` launches the multi-agent mission flow; `/quit` remains terminal-only.
 
-### Core Runtime
+### Session Attachments
 
-- Shared lifecycle under `core/app_runtime.py`.
-- Owns memory, tool loading, LLM routing, warm-up scheduling, and search refresh behavior.
-- Keeps chat and mission orchestration shared across CLI and web callers.
+- The browser supports upload, list, and delete operations for session-scoped attachments.
+- Attachments are stored under `temp_core/attachments`, indexed locally, and filtered by `session_id` during retrieval.
+- Current attachment support requires extractable text content and enforces a 10 MB per-file limit.
 
-## Advanced Workflows
+### Memory And Search
 
-### Create a Custom Skill
+- Session history lives in the local SQLite database.
+- Durable facts live in the local memory layer and are added to the system prompt when available.
+- Hybrid retrieval combines vector search and keyword search over the local workspace and active session attachments.
 
-1. Add a Python skill module under `skills/`.
-2. Keep imports optional-safe so missing dependencies degrade cleanly.
-3. Use the runtime reload flow to register the new tool without restarting the backend.
+## Operator Visibility And Control
 
-### Prepare and Search
+### Command Center
 
-1. Use `Prepare Runtime` when local model assets or runtime readiness still need to settle.
-2. The local search runtime uses both semantic and keyword indexes under `data/`.
-3. Existing cached indexes can stay available immediately while the heavier refresh work is deferred until after a completed turn.
+- Shows the command map between CLI behavior and browser actions.
+- Lists loaded tools grouped by source label.
+- Surfaces MCP state, discovered tools, degraded reasons, recent executions, and guided MCP setup.
+- Runs a browser-safe verification workflow that reports skill integrity, sandbox readiness, truth-synthesis health, startup guidance, and a bounded eval summary.
+
+### Posture And Activity
+
+- `Posture` focuses on privacy posture, trust signals, and durable-memory transparency.
+- `Activity` focuses on runtime metrics, startup guidance, execution mode, and live runtime-action logs.
+- System status now separates `inference_status` from `search_status` and includes timing and payload metrics for operator debugging.
 
 ## Common Environment Settings
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
 | `LLM_PROVIDER` | Select `ollama`, `openrouter`, or `llamacpp`. | `ollama` |
-| `REQUIRE_CONFIRMATION` | Require manual approval for sensitive tool execution. | `false` |
-| `MCP_ENABLED` | Enable MCP server configuration and discovery. | `false` |
-| `EXTERNAL_SUBPROCESS_INTEGRATIONS_ENABLED` | Allow optional subprocess-backed integrations. | `false` |
+| `OLLAMA_MODEL` | Active Ollama model name. | `llama3.1:8b` |
+| `OPENROUTER_MODEL` | Active OpenRouter model identifier. | `openai/gpt-oss-120b:free` |
+| `REQUIRE_CONFIRMATION` | Require per-request approval for sensitive browser actions. | `false` |
+| `MCP_ENABLED` | Enable MCP server integration. | `false` |
+| `EXTERNAL_SUBPROCESS_INTEGRATIONS_ENABLED` | Allow subprocess-backed integrations such as MCP or Claude-Mem worker startup. | `false` |
 | `DB_PATH` | Local SQLite runtime database path. | `./data/zephyr.db` |
-| `VECTOR_STORE_DIR` | Local semantic vector store path. | `./data/vector_store` |
+| `VECTOR_STORE_DIR` | Local semantic index path. | `./data/vector_store` |
+| `SESSION_ATTACHMENTS_DIR` | Local storage path for uploaded session attachments. | `./temp_core/attachments` |
+| `SEARCH_DIR` | Root path indexed for workspace retrieval. | repository root |
 
-## System Requirements
+## Development And Validation
 
-- Python 3.10+
-- Node.js 18+
-- Enough local RAM and storage for the chosen inference provider and local indexes
+- `npm run dev:hybrid` starts the watcher-driven backend plus the Vite frontend.
+- `npm run dev:hybrid:stable` starts a stable no-reload backend plus the Vite frontend.
+- `npm run build:frontend` validates the frontend production build.
+- `npm run verify:command-center` checks command-center inventory stability across reloads and fresh sessions.
+- `npm run verify:hybrid` runs the broader hybrid regression flow.
+
+## Related Docs
+
+- `Features.md` for the current user-facing feature inventory.
+- `DASHBOARD.md` for the control-room page map.
+- `API_DOCS.md` for endpoint details.
+- `glossary.md` for shared terminology.
 
 For shared terminology, see [glossary.md](./glossary.md). For endpoint details, see [API_DOCS.md](./API_DOCS.md).
-
-## 3. Advanced Workflows
-
-### Creating a Custom Skill
-To extend uZephyr, create a file in `backend/skills/my_skill.py`:
-```python
-def weather_lookup(location: str):
-    """Fetches weather for a given city."""
-    # Your logic here
-    return f"The weather in {location} is sunny."
-```
-uZephyr automatically parses the docstring to explain the tool to the LLM.
-
-### Knowledge Ingestion
-1.  Drop `.pdf` or `.md` files into the `data/ingest` folder.
-2.  Use the UI to trigger "Rebuild Index."
-3.  The AI can now answer questions about those specific documents using the `search_knowledge` tool.
-
----
-
-## 4. Configuration Reference (`.env`)
-
-| Variable | Description | Default |
-|:--- |:--- |:--- |
-| `LLM_PROVIDER` | `ollama`, `openrouter`, `openai`, or `llamacpp` | `ollama` |
-| `CONFIRM_SENSITIVE_TOOLS` | Requires user click for file/shell actions | `true` |
-| `MEMORY_RETENTION` | How many previous turns to keep in active context | `10` |
-| `VECTOR_DB_PATH` | Path to store your embeddings | `./data/vector_store` |
-
----
-
-## 5. System Requirements
-- **Python**: 3.10+ (for async/await support).
-- **Node.js**: 18+ (for the React Control Room).
-- **RAM**: 8GB minimum (16GB+ recommended for local LLM inference).
-- **Storage**: ~2GB for base dependencies + model size.
-
----
-
-*For API-specific implementation details, please refer to [API_DOCS.md](./API_DOCS.md).*
-```
-
----
-
-### 2. Terms (`TERMS.md`)
-Since this is a self-hosted tool, the terms focus on user responsibility and the "as-is" nature of open-source.
-
-```markdown
-# Terms of Service
-
-**Last Updated: May 17, 2026**
-
-By using uZephyr, you agree to the following terms:
-
-### 1. Use of Software
-uZephyr is provided as an open-source tool for personal and professional use. You are responsible for the environment in which it is deployed.
-
-### 2. AI Output Disclaimer
-uZephyr interfaces with Large Language Models (LLMs). We do not guarantee the accuracy, safety, or reliability of the content generated by these models. Users should exercise caution, especially when enabling autonomous "Missions."
-
-### 3. Responsibility for Actions
-If you disable `REQUIRE_CONFIRMATION`, the AI may execute scripts or modify files on your local system autonomously. You accept full responsibility for any data loss or system damage resulting from such actions.
-
-### 4. Limitation of Liability
-The software is provided "as-is," without warranty of any kind. In no event shall the authors (kohenmaasai) be liable for any claim, damages, or other liability.
-
-### 5. License
-Usage is governed by the MIT License included in the repository.
-```
-
----
-
-### 3. Privacy (`PRIVACY.md`)
-This highlights the "local-first" promise which is a core selling point of your project.
-
-```markdown
-# Privacy Policy
-
-uZephyr is built with a **local-first** philosophy. Your privacy is a priority, not an afterthought.
-
-### 1. Data Residency
-- **Local Storage**: All chat histories, vector embeddings, and session data are stored locally on your machine in the `/data` and `/knowledge` directories.
-- **No Analytics**: uZephyr does not include telemetry, tracking pixels, or third-party analytics.
-
-### 2. Third-Party LLM Providers
-While uZephyr runs locally, it may communicate with external LLM providers depending on your configuration:
-- **Ollama / LlamaCPP**: 100% local. No data leaves your machine.
-- **OpenRouter / Anthropic**: If configured, your prompts are sent to these providers. Check their respective privacy policies for data handling.
-
-### 3. Privacy Posture
-The "Posture" view in the React Control Room provides real-time visibility into:
-- Whether your current LLM provider is local or cloud-based.
-- Whether sensitive tool execution requires your manual confirmation.
-
-### 4. Security
-uZephyr includes a sandbox backend for tool execution. However, as a local tool with file-system access, you should only run uZephyr in trusted environments.
-```
-
----
-
-### 4. API Docs (`API_DOCS.md`)
-A reference for anyone wanting to build their own frontend or integrations for your bridge.
-
-```markdown
-# uZephyr API Reference
-
-The uZephyr backend runs on FastAPI (default: `http://127.0.0.1:8000`).
-
-## System Endpoints
-
-### `GET /api/system/status`
-Returns the current health and configuration of the runtime.
-
-### `POST /api/runtime/reload/stream`
-Triggers a hot-reload of all skills and MCP tools.
-- **Returns**: A Server-Sent Event (SSE) stream of the reload progress.
-
-## Chat & Missions
-
-### `POST /api/chat/stream`
-The primary endpoint for interacting with the AI.
-- **Body**: `{ "message": "string", "session_id": "string" }`
-- **Returns**: SSE stream of the AI's response.
-
-### `POST /api/missions/turn`
-Starts an autonomous mission based on a prompt.
-- **Body**: `{ "objective": "string" }`
-
-### `GET /api/sessions/{session_id}/messages`
-Retrieves the history for a specific chat session.
-
-## Command Center
-
-### `GET /api/command-center/overview`
-Provides an inventory of all active Skills, MCP tools, and Memory modules.
-
-### `POST /api/command-center/verify`
-Runs a suite of diagnostic tests to ensure the local environment (Python, Node, Vector DB) is correctly configured.
-
-## Authentication
-By default, uZephyr is designed for local-host access and does not implement a global auth layer. If exposing the backend to a network, it is recommended to use a reverse proxy with Basic Auth or a VPN.
-```

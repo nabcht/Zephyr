@@ -1,5 +1,5 @@
 # merge_files_recursively/__init__.py
-"""uZephyr skill: merge_files_recursively
+"""Zephyr skill: merge_files_recursively
 
 This skill provides a single asynchronous entry point ``run`` that accepts a
 path to a directory, walks the tree recursively, concatenates the contents of
@@ -7,7 +7,7 @@ all ``.py`` files in a deterministic depth‑first alphabetical order and return
 the combined source as a string.
 
 The function is deliberately simple and has no external dependencies, making
-it suitable for inclusion in the `skills/` directory of a uZephyr project.
+it suitable for inclusion in the `skills/` directory of a Zephyr project.
 
 The implementation includes comprehensive docstrings, type hints and robust
 error handling for I/O operations.
@@ -65,7 +65,7 @@ def _collect_py_files(root: Path) -> List[Path]:
 
 
 async def run(root_dir: str) -> str:
-    """Entry point for the uZephyr skill.
+    """Entry point for the Zephyr skill.
 
     Parameters
     ----------

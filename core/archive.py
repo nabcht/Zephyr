@@ -14,7 +14,7 @@ import config
 from core.mcp_client import MCPStdioClient
 from core.mcp_contracts import MCPToolError
 
-log = logging.getLogger("uzephyr.archive")
+log = logging.getLogger("zephyr.archive")
 
 _SEARCH_TOOL_CANDIDATES: tuple[str, ...] = (
     "search",
@@ -38,7 +38,7 @@ _WRITE_TOOL_CANDIDATES: tuple[str, ...] = (
 
 def _slugify(value: str) -> str:
     slug = re.sub(r"[^0-9A-Za-z]+", "-", value).strip("-").lower()
-    return slug or "uzephyr"
+    return slug or "zephyr"
 
 
 def _summarize_title(text: str, limit: int = 96) -> str:
@@ -62,8 +62,8 @@ class ArchiveBridge:
         self._mcp_clients: list[MCPStdioClient] = []
         self._http_client = http_client or httpx.AsyncClient(timeout=httpx.Timeout(20.0, connect=2.0))
         self._owns_http_client = http_client is None
-        self._memory_session_id = f"uzephyr-{self._project_slug}-archive"
-        self._content_session_id = f"uzephyr-{self._project_slug}-archive-content"
+        self._memory_session_id = f"zephyr-{self._project_slug}-archive"
+        self._content_session_id = f"zephyr-{self._project_slug}-archive-content"
 
     @property
     def project_name(self) -> str:
@@ -192,8 +192,8 @@ class ArchiveBridge:
                     "content_session_id": self._content_session_id,
                     "memory_session_id": self._memory_session_id,
                     "project": self._project_name,
-                    "platform_source": "uzephyr",
-                    "user_prompt": "Imported durable facts from uZephyr.",
+                    "platform_source": "zephyr",
+                    "user_prompt": "Imported durable facts from Zephyr.",
                     "started_at": created_at,
                     "started_at_epoch": created_at_epoch,
                     "completed_at": created_at,
@@ -208,15 +208,15 @@ class ArchiveBridge:
                     "text": text,
                     "type": "discovery",
                     "title": title,
-                    "subtitle": "Imported from uZephyr durable memory",
+                    "subtitle": "Imported from Zephyr durable memory",
                     "facts": json.dumps([text], ensure_ascii=False),
                     "narrative": text,
-                    "concepts": json.dumps(["uzephyr", "durable-memory"], ensure_ascii=False),
+                    "concepts": json.dumps(["zephyr", "durable-memory"], ensure_ascii=False),
                     "files_read": json.dumps([], ensure_ascii=False),
                     "files_modified": json.dumps([], ensure_ascii=False),
                     "prompt_number": 0,
                     "discovery_tokens": 0,
-                    "agent_type": "uzephyr",
+                    "agent_type": "zephyr",
                     "agent_id": "memory_durable_fact",
                     "created_at": created_at,
                     "created_at_epoch": created_at_epoch,

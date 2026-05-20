@@ -239,6 +239,19 @@ export interface MCPConfigurationApplyResponse {
   overview: CommandCenterOverview;
 }
 
+export interface MemoryBrainRepair {
+  message: string;
+  raw_fact_count: number;
+  fact_count: number;
+  duplicate_count: number;
+  timeline_line_count: number;
+  entity_file_count: number;
+  timeline_path: string;
+  truth_path: string;
+  backup_paths: string[];
+  overview: CommandCenterOverview;
+}
+
 export interface MarkdownDocument {
   slug: string;
   title: string;

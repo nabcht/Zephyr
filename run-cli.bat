@@ -1,5 +1,5 @@
 @echo off
-title uZephyr - CLI Fallback Mode
+title Zephyr - CLI Fallback Mode
 cd /d "%~dp0"
 
 if not exist "venv\Scripts\activate.bat" (

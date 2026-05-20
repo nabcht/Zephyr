@@ -8,6 +8,7 @@ from backend.schemas.command_center import (
     CommandCenterOverviewResponse,
     MCPConfigurationApplyRequest,
     MCPConfigurationApplyResponse,
+    MemoryBrainRepairResponse,
     RuntimeVerificationResponse,
 )
 from backend.services.command_center_service import CommandCenterService
@@ -34,6 +35,15 @@ async def apply_mcp_configuration(payload: MCPConfigurationApplyRequest) -> MCPC
     try:
         return await service.apply_mcp_configuration(payload)
     except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/memory/repair", response_model=MemoryBrainRepairResponse)
+async def repair_memory_brain() -> MemoryBrainRepairResponse:
+    """Rebuild timeline.log, truth.md, and entity backlinks from durable memories."""
+    try:
+        return await service.repair_memory_brain()
+    except (FileNotFoundError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 

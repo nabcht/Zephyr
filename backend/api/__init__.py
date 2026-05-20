@@ -1,1 +1,1 @@
-"""API surface for the uZephyr hybrid backend."""
+"""API surface for the Zephyr hybrid backend."""

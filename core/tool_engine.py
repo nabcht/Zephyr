@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from core.memory import MemoryManager
     from skills.skill_loader import SkillLoader
 
-log = logging.getLogger("uzephyr.tool_engine")
+log = logging.getLogger("zephyr.tool_engine")
 
 
 class ToolEngine:

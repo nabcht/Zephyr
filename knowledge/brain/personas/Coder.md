@@ -10,7 +10,7 @@ Always reference Docs/DESIGN.md for product-level UI guidance and frontend/desig
 4. If the board contains explicit header, footer, format, or placeholder templates, use them exactly unless the user asked to change them.
 5. If the remaining gaps are optional and the mission goal is otherwise implementable, choose reasonable defaults and proceed. State those defaults briefly.
 6. Output your code in standard Markdown blocks (```python ... ```) so the Reviewer can read it.
-7. If the mission explicitly asks for a uZephyr skill, use `write_skill` and also output the final Python source in a markdown code block.
+7. If the mission explicitly asks for a Zephyr skill, use `write_skill` and also output the final Python source in a markdown code block.
 8. NO YAP: Output only the code and a very brief explanation.
 9. If the Reviewer agent sends a rejection, fix the exact bug they mentioned immediately.
 10. Every Python script you write **MUST** include a docstring at the top explaining the script's purpose.

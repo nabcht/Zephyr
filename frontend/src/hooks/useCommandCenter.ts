@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import type {
   CommandCenterOverview,
+  MemoryBrainRepair,
   MCPConfigurationApplyRequest,
   MCPConfigurationApplyResponse,
   RuntimeVerification,
@@ -10,15 +11,18 @@ import type {
 interface UseCommandCenterResult {
   overview: CommandCenterOverview | null;
   verification: RuntimeVerification | null;
+  memoryRepair: MemoryBrainRepair | null;
   error: string | null;
   isLoading: boolean;
   isRefreshingMcp: boolean;
   isApplyingMcp: boolean;
   isVerifying: boolean;
+  isRepairingMemory: boolean;
   refresh: () => Promise<void>;
   refreshMcpDiscovery: () => Promise<void>;
   applyMcpConfiguration: (payload: MCPConfigurationApplyRequest) => Promise<MCPConfigurationApplyResponse>;
   verifyRuntime: () => Promise<void>;
+  repairMemoryBrain: () => Promise<MemoryBrainRepair>;
 }
 
 async function requestJson<TResponse>(url: string, init?: RequestInit, signal?: AbortSignal): Promise<TResponse> {
@@ -49,11 +53,13 @@ async function requestJson<TResponse>(url: string, init?: RequestInit, signal?: 
 export function useCommandCenter(): UseCommandCenterResult {
   const [overview, setOverview] = useState<CommandCenterOverview | null>(null);
   const [verification, setVerification] = useState<RuntimeVerification | null>(null);
+  const [memoryRepair, setMemoryRepair] = useState<MemoryBrainRepair | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshingMcp, setIsRefreshingMcp] = useState(false);
   const [isApplyingMcp, setIsApplyingMcp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isRepairingMemory, setIsRepairingMemory] = useState(false);
 
   async function load(signal?: AbortSignal): Promise<void> {
     setIsLoading(true);
@@ -83,11 +89,13 @@ export function useCommandCenter(): UseCommandCenterResult {
   return {
     overview,
     verification,
+    memoryRepair,
     error,
     isLoading,
     isRefreshingMcp,
     isApplyingMcp,
     isVerifying,
+    isRepairingMemory,
     refresh: async () => load(),
     refreshMcpDiscovery: async () => {
       setIsRefreshingMcp(true);
@@ -130,6 +138,23 @@ export function useCommandCenter(): UseCommandCenterResult {
         setError(error instanceof Error ? error.message : "Unknown error");
       } finally {
         setIsVerifying(false);
+      }
+    },
+    repairMemoryBrain: async () => {
+      setIsRepairingMemory(true);
+      setError(null);
+      try {
+        const response = await requestJson<MemoryBrainRepair>("/api/command-center/memory/repair", { method: "POST" });
+        setOverview(response.overview);
+        setMemoryRepair(response);
+        setVerification(null);
+        return response;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Unknown error";
+        setError(message);
+        throw error instanceof Error ? error : new Error(message);
+      } finally {
+        setIsRepairingMemory(false);
       }
     },
   };

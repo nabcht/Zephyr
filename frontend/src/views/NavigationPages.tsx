@@ -135,14 +135,34 @@ export function DocsPage({ onNavigate }: NavigationPageProps) {
     <MarkdownDocumentPage
       slug="docs"
       eyebrow="Docs"
-      fallbackTitle="uZephyr Features & Architecture"
+      fallbackTitle="Zephyr Features & Architecture"
       fallbackSubtitle="Loading the architecture guide from the Docs folder."
       icon={BookOpen}
       actions={
         <>
+          <ActionLink label="Features" view="features" onNavigate={onNavigate} icon={BookOpen} />
           <ActionLink label="Glossary" view="glossary" onNavigate={onNavigate} icon={Search} />
           <ActionLink label="API Docs" view="api-docs" onNavigate={onNavigate} icon={FileCode2} />
           <ActionLink label="Privacy" view="privacy" onNavigate={onNavigate} icon={LockKeyhole} />
+        </>
+      }
+    />
+  );
+}
+
+export function FeaturesPage({ onNavigate }: NavigationPageProps) {
+  return (
+    <MarkdownDocumentPage
+      slug="features"
+      eyebrow="Features"
+      fallbackTitle="Zephyr Features"
+      fallbackSubtitle="Loading the current feature inventory from Docs/Features.md."
+      icon={BookOpen}
+      actions={
+        <>
+          <ActionLink label="Architecture" view="docs" onNavigate={onNavigate} icon={BookOpen} />
+          <ActionLink label="Glossary" view="glossary" onNavigate={onNavigate} icon={Search} />
+          <ActionLink label="API Docs" view="api-docs" onNavigate={onNavigate} icon={FileCode2} />
         </>
       }
     />
@@ -154,12 +174,13 @@ export function GlossaryPage({ onNavigate }: NavigationPageProps) {
     <MarkdownDocumentPage
       slug="glossary"
       eyebrow="Glossary"
-      fallbackTitle="uZephyr Shared Vocabulary"
+      fallbackTitle="Zephyr Shared Vocabulary"
       fallbackSubtitle="Loading the glossary directly from Docs/glossary.md."
       icon={Search}
       actions={
         <>
-          <ActionLink label="Docs" view="docs" onNavigate={onNavigate} icon={BookOpen} />
+          <ActionLink label="Features" view="features" onNavigate={onNavigate} icon={BookOpen} />
+          <ActionLink label="Architecture" view="docs" onNavigate={onNavigate} icon={BookOpen} />
           <ActionLink label="API Docs" view="api-docs" onNavigate={onNavigate} icon={FileCode2} />
         </>
       }
@@ -185,7 +206,7 @@ export function SupportPage({ status, sessionId, onNavigate }: NavigationPagePro
         <div className="flex flex-wrap gap-space-sm">
           <ActionLink label="Open Command Center" view="command-center" onNavigate={onNavigate} icon={Command} />
           <ActionLink label="Open Activity" view="activity" onNavigate={onNavigate} icon={Activity} />
-          <ActionLink label="Read Docs" view="docs" onNavigate={onNavigate} icon={BookOpen} />
+          <ActionLink label="Read Docs" view="features" onNavigate={onNavigate} icon={BookOpen} />
           <ActionLink label="Open API Docs" view="api-docs" onNavigate={onNavigate} icon={FileCode2} />
         </div>
       </PageSection>
@@ -280,7 +301,7 @@ export function ProfilePage({ status, sessionId, onNavigate }: NavigationPagePro
       <WorkspaceHeader
         eyebrow="Profile"
         title="Local Operator Profile"
-        subtitle="uZephyr currently treats the browser user as a local operator rather than a network-authenticated account. This page summarizes the active local session."
+        subtitle="Zephyr currently treats the browser user as a local operator rather than a network-authenticated account. This page summarizes the active local session."
         icon={CircleUserRound}
       />
 
@@ -363,7 +384,12 @@ export function ApiDocsPage({ onNavigate }: NavigationPageProps) {
       fallbackTitle="FastAPI Bridge Reference"
       fallbackSubtitle="Loading the API reference directly from Docs/API_DOCS.md."
       icon={FileCode2}
-      actions={<ActionLink label="System Docs" view="docs" onNavigate={onNavigate} icon={BookOpen} />}
+      actions={
+        <>
+          <ActionLink label="Features" view="features" onNavigate={onNavigate} icon={BookOpen} />
+          <ActionLink label="System Docs" view="docs" onNavigate={onNavigate} icon={BookOpen} />
+        </>
+      }
     />
   );
 }

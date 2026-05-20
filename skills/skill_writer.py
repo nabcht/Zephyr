@@ -18,7 +18,7 @@ from pathlib import Path
 
 import config
 
-log = logging.getLogger("uzephyr.skill_writer")
+log = logging.getLogger("zephyr.skill_writer")
 
 # ── AST-based safety analysis ─────────────────────────────────────────────
 

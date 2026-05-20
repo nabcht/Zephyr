@@ -1,4 +1,4 @@
-"""Thin wrapper around the existing uZephyr core configuration and status APIs."""
+"""Thin wrapper around the existing Zephyr core configuration and status APIs."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class ZephyrCoreWrapper:
         )
         tool_counts = self._tool_counts(runtime)
         return {
-            "name": "uZephyr Hybrid API",
+            "name": "Zephyr Hybrid API",
             "version": "0.1.0",
             "provider": config.LLM_PROVIDER,
             "model": self._model_name(),

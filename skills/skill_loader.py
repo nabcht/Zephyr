@@ -20,7 +20,7 @@ import config
 if TYPE_CHECKING:
     from core.tool_engine import ToolEngine
 
-log = logging.getLogger("uzephyr.skill_loader")
+log = logging.getLogger("zephyr.skill_loader")
 
 # Files that are part of the loader infrastructure — never load as skills
 _EXCLUDED: set[str] = {"__init__.py", "skill_loader.py", "skill_writer.py"}

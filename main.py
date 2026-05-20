@@ -245,7 +245,7 @@ class ZephyrCLI:
 def _setup_logging() -> None:
     """Configure root logger to write to both Rich console and a log file."""
     config.LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    file_handler = logging.FileHandler(config.LOGS_DIR / "uzephyr.log", encoding="utf-8")
+    file_handler = logging.FileHandler(config.LOGS_DIR / "zephyr.log", encoding="utf-8")
     file_handler.setFormatter(logging.Formatter("%(asctime)s  %(name)-28s  %(levelname)-7s  %(message)s"))
 
     logging.basicConfig(

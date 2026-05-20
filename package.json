@@ -1,6 +1,7 @@
 {
-  "name": "uzephyr-hybrid",
+  "name": "zephyr-hybrid",
   "private": true,
+  "author": "nabcht <nebil.chtourou@gmail.com>",
   "scripts": {
     "dev:hybrid": "concurrently -k -n api,web -c magenta,cyan \"python -m backend.dev_server\" \"npm --prefix frontend run dev\"",
     "dev:hybrid:stable": "concurrently -k -n api,web -c magenta,cyan \"python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000\" \"npm --prefix frontend run dev\"",

@@ -1,1 +1,1 @@
-"""Route modules for the uZephyr hybrid backend."""
+"""Route modules for the Zephyr hybrid backend."""

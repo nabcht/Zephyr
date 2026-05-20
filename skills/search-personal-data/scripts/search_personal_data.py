@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-log = logging.getLogger("uzephyr.search_personal_data")
+log = logging.getLogger("zephyr.search_personal_data")
 
 # Singleton retriever reference, injected at startup by the tool engine
 _retriever: Any = None  # core.retriever.HybridRetriever | None

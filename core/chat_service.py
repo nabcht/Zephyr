@@ -11,7 +11,7 @@ from rich.console import Console
 from core.app_runtime import AppRuntime
 from core.llm import StreamedTurnCancelled
 
-log = logging.getLogger("uzephyr.chat_service")
+log = logging.getLogger("zephyr.chat_service")
 
 
 class ChatService:

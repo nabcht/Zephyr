@@ -10,7 +10,7 @@ from typing import Optional
 import config
 from core.indexer import LocalIndexer
 
-log = logging.getLogger("uzephyr.skills.index_files")
+log = logging.getLogger("zephyr.skills.index_files")
 
 # Reference to the global indexer set by the shared runtime at startup
 _global_indexer: Optional[LocalIndexer] = None

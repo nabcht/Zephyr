@@ -10,7 +10,7 @@ from typing import Any, Callable, get_args, get_origin, get_type_hints
 
 from core.tool_executor import tool_is_allowed
 
-log = logging.getLogger("uzephyr.tool_registry")
+log = logging.getLogger("zephyr.tool_registry")
 
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+")
 _PROVIDER_TOOL_DESCRIPTION_MAXIMUM_LENGTH = 140

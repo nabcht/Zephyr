@@ -75,8 +75,8 @@ class Agency:
         board = Blackboard(mission_id=uuid.uuid4().hex[:8], goal=user_task)
         board.add_milestone("Mission created.")
         if self._mission_requires_skill(user_task):
-            board.add_finding("requested_artifact", "uZephyr skill package")
-            board.add_milestone("Mission explicitly requests a uZephyr skill artifact.")
+            board.add_finding("requested_artifact", "Zephyr skill package")
+            board.add_milestone("Mission explicitly requests a Zephyr skill artifact.")
 
         await self._emit_progress(on_progress, board, "Mission created.", 0)
 
@@ -386,7 +386,7 @@ class Agency:
         message = _AGENT_USER_MESSAGES[agent]
         if agent == "Coder" and self._mission_requires_skill(board.goal):
             return (
-                f"{message} The mission explicitly asks for a uZephyr skill. "
+                f"{message} The mission explicitly asks for a Zephyr skill. "
                 "Use write_skill to create or update the skill package, and still output the final Python source in a markdown code block for review."
             )
         if agent == "Coder" and self._mission_requires_staged_core_change(board.goal):
@@ -412,7 +412,7 @@ class Agency:
             "write a skill",
             "create a skill",
             "build a skill",
-            "uzephyr skill",
+            "zephyr skill",
             "agent skill",
         )
         return any(pattern in lowered for pattern in patterns)

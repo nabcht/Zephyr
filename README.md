@@ -1,6 +1,6 @@
-# uZephyr
+# Zephyr
 
-uZephyr is a local-first AI sidekick with a primary React control room backed by a FastAPI bridge over the shared Python runtime. The browser UI is the default interface now; the CLI remains available as the explicit fallback/operator surface.
+Zephyr is a local-first AI sidekick with a primary React control room backed by a FastAPI bridge over the shared Python runtime. The browser UI is the default interface now; the CLI remains available as the explicit fallback/operator surface.
 
 ## Current Surfaces
 
@@ -52,7 +52,7 @@ graph TD
 ## Project Layout
 
 ```text
-uZephyr/
+Zephyr/
 ├── backend/                  FastAPI bridge, schemas, and backend services
 ├── frontend/                 React + Vite control room
 ├── core/                     Shared runtime, orchestration, memory, search, and tooling
@@ -200,7 +200,7 @@ MCP_SERVERS_JSON=[{"name":"archive","command":"python","args":["-m","archive_mcp
 
 ## Adding New Skills
 
-uZephyr is built for extensibility.
+Zephyr is built for extensibility.
 
 1. Create a new directory in `skills/` such as `skills/my-new-skill/`.
 2. Implement the skill logic in a Python module.

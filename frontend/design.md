@@ -1,5 +1,5 @@
 ---
-name: uZephyr-Theme
+name: Zephyr-Theme
 colors:
   primary: "#1A1C1E"
   accent: "#B8422E"
@@ -12,7 +12,7 @@ rounded:
 ---
 
 ## Overview
-uZephyr should feel like a high-end terminal for AI: minimalist, precise, and professional.
+Zephyr should feel like a high-end terminal for AI: minimalist, precise, and professional.
 
 ## Colors
 - Use Primary for headers and sidebars.

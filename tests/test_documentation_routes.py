@@ -17,16 +17,17 @@ class DocumentationRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertEqual(payload["slug"], "docs")
-        self.assertEqual(payload["title"], "uZephyr Documentation: Features and Architecture")
-        self.assertTrue(payload["content"].startswith("uZephyr is a local-first AI sidekick"))
+        self.assertEqual(payload["title"], "Zephyr Documentation: Features and Architecture")
+        self.assertTrue(payload["content"].startswith("Zephyr is a local-first AI sidekick"))
         self.assertFalse(payload["content"].startswith("# "))
 
     def test_selected_documentation_slugs_return_markdown_content(self) -> None:
         expected_titles = {
-            "api-docs": "uZephyr API Reference",
+            "features": "Zephyr Features",
+            "api-docs": "Zephyr API Reference",
             "privacy": "Privacy Policy",
             "terms": "Terms of Service",
-            "glossary": "uZephyr Glossary",
+            "glossary": "Zephyr Glossary",
         }
 
         for slug, expected_title in expected_titles.items():

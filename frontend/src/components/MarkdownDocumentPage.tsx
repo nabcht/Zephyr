@@ -27,6 +27,8 @@ function resolveDocumentHref(href?: string): string | undefined {
   switch (normalized) {
     case "docs.md":
       return "/docs";
+    case "features.md":
+      return "/features";
     case "glossary.md":
       return "/glossary";
     case "api_docs.md":

@@ -12,6 +12,7 @@ class DocumentationService:
 
     _ALLOWED_DOCS = {
         "docs": "docs.md",
+        "features": "Features.md",
         "glossary": "glossary.md",
         "api-docs": "API_DOCS.md",
         "privacy": "PRIVACY.md",

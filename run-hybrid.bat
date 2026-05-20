@@ -1,5 +1,5 @@
 @echo off
-title uZephyr - Primary React Interface
+title Zephyr - Primary React Interface
 cd /d "%~dp0"
 
 if not exist "venv\Scripts\activate.bat" (

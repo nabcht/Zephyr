@@ -35,7 +35,7 @@ async def create_calendar_event(
     ics_content = (
         "BEGIN:VCALENDAR\r\n"
         "VERSION:2.0\r\n"
-        "PRODID:-//uZephyr//EN\r\n"
+        "PRODID:-//Zephyr//EN\r\n"
         "BEGIN:VEVENT\r\n"
         f"DTSTART:{dt_start.strftime(fmt)}\r\n"
         f"DTEND:{dt_end.strftime(fmt)}\r\n"

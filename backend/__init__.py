@@ -1,1 +1,1 @@
-"""Backend package for the uZephyr hybrid API."""
+"""Backend package for the Zephyr hybrid API."""

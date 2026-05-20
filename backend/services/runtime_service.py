@@ -23,13 +23,13 @@ from skills.sandbox.scripts.sandbox import describe_sandbox_preparation, prepare
 
 
 class RuntimeStatusService:
-    """Provide stable backend responses from the existing uZephyr core."""
+    """Provide stable backend responses from the existing Zephyr core."""
 
     def __init__(self, wrapper: ZephyrCoreWrapper | None = None) -> None:
         self.wrapper = wrapper or ZephyrCoreWrapper()
 
     def get_health(self) -> HealthResponse:
-        return HealthResponse(status="ok", service="uZephyr Hybrid API")
+        return HealthResponse(status="ok", service="Zephyr Hybrid API")
 
     async def get_system_status(self) -> SystemStatusResponse:
         runtime = get_runtime()

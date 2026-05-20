@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from core.tool_engine import ToolEngine
     from core.memory import MemoryManager
 
-log = logging.getLogger("uzephyr.llm")
+log = logging.getLogger("zephyr.llm")
 
 # Maximum tool-call iterations per turn to prevent infinite loops
 _MAX_TOOL_ROUNDS = 10
@@ -268,7 +268,7 @@ def ensure_models() -> None:
         return
 
     _console.print(
-        f"[bold yellow]uZephyr:[/] {len(missing)} model file(s) missing — downloading now…"
+        f"[bold yellow]Zephyr:[/] {len(missing)} model file(s) missing — downloading now…"
     )
 
     with httpx.Client(timeout=httpx.Timeout(None, connect=30.0), follow_redirects=True) as client:
@@ -417,8 +417,8 @@ class LLMRouter:
         headers: dict[str, str] = {"Content-Type": "application/json"}
         if self._provider == "openrouter":
             headers["Authorization"] = f"Bearer {config.OPENROUTER_API_KEY}"
-            headers["HTTP-Referer"] = "https://github.com/uzephyr"
-            headers["X-Title"] = "uZephyr"
+            headers["HTTP-Referer"] = "https://github.com/nabcht"
+            headers["X-Title"] = "Zephyr"
         return headers
 
     def _model(self) -> str:

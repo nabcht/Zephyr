@@ -2,262 +2,57 @@
 
 Updated: 2026-05-20
 
-## What Was Done
+## Status
 
-- Extracted the shared runtime lifecycle into `core/app_runtime.py` and moved shared chat, mission, and CLI command orchestration into `core/chat_service.py`, `core/mission_service.py`, and `core/cli_commands.py`.
-- Kept the CLI and hybrid web runtime on the same shared backend services instead of duplicating initialization and runtime state handling.
-- Added the FastAPI backend under `backend/` with routes and services for system status, runtime actions, sessions, chat, mission execution, and command-center inspection.
-- Added the React + Vite frontend under `frontend/` with the router-driven control room, typed API hooks, session restore/history loading, and SSE chat, mission, and runtime-action streaming.
-- Migrated runtime actions into the web UI, including refresh, reload tools, prepare runtime, session creation, and streamed chat.
-- Added a command-center web surface for former CLI-only inspection commands, including equivalents for `/skills`, `/memory`, `/mcp`, `/verify`, `/help`, and `/mission`.
-- Added a root hybrid dev workflow so the FastAPI backend and Vite frontend can run together during development.
-- Validated the backend changes with focused Python compile checks and validated the frontend with a successful production build.
-- Browser-tested the hybrid UI for reload tools, streamed chat, session restore, prepare runtime, and mission execution.
-- Cleaned the remaining tool-inventory import noise by fixing the optional DuckDuckGo search import path, removing the malformed `recursive_merge` self-import, and filtering imported helper functions out of skill registration.
-- Audited the remaining legacy web header surface and migrated the web-mode execution banner into the React app.
-- Added a repeatable in-process regression check for command-center inventory stability across runtime reloads and fresh session transitions.
-- Added SSE mission progress streaming so the React mission workflow receives real agency milestone snapshots before the final persisted result.
-- Added shared embedding-model cache preparation so `/prepare`, CLI `/prepare`, startup guidance, and the indexer all use the same app-managed local vector-model cache path.
-- Deferred search runtime bootstrap and lazy embedding-model access so initial backend startup no longer waits on full semantic-search warmup.
-- Declared the React hybrid app as the primary interface, with the CLI retained as the explicit fallback/operator surface.
-- Added a repeatable hybrid regression suite that verifies the primary React launcher, the stable no-reload hybrid flow, command-center inventory, and mission SSE.
-- Formally closed Phase 0 and Phase 1 after the regression, parity, and interface-strategy work landed.
-- Added progressive runtime updates for reload and prepare, surfaced through a live runtime activity panel in the React control room.
-- Formally closed Phase 2 after runtime progress streaming landed and the hybrid regression suite passed with the new runtime stream checks.
-- Hardened the watcher-driven hybrid launcher so per-skill script edits no longer bounce the backend process during normal React development.
-- Rebuilt the root `config.py` runtime module after placeholder drift blocked backend imports, and narrowed the watcher-driven backend reload scope to `backend/`, `core/`, `skills/`, and the root config file.
-- Removed the disabled-mode Claude-Mem worker startup probe and deferred LLM HTTP client creation so cold runtime bootstrap no longer spends time on unused external integration checks or eager HTTP client setup.
-- Added a rebuild path for the local semantic and keyword search stores, then refreshed the on-disk indexes so semantic search resumed using the current embedding dimension instead of falling back to grep.
-- Settled deferred search warm-up during CLI `/prepare` and the web `Prepare runtime` action so explicit preparation now finishes with a ready-or-fallback search status instead of returning while search is still warming.
-- Extended the hybrid runtime-action regression so `prepare` now fails validation if it completes without search-runtime details or while `search_status` is still `Warming`.
-- Declared the `watchdog` Python dependency in the shared install path so incremental local-search auto-indexing no longer comes up disabled in standard setups.
-- Extended the launcher regression to fail if `requirements.txt` drops the `watchdog` dependency again.
-- Warmed the active inference provider during explicit prepare flows and tracked the initial background search refresh so prepare now returns only after provider warm-up and the first search refresh both settle.
-- Measured the active-provider first-turn path and confirmed the remaining post-bootstrap penalty was the cold provider/search-prep path, not runtime initialization itself.
-- Added a separate `inference_status` runtime snapshot field and surfaced it in the React control room so provider readiness is now visible alongside search readiness instead of being inferred indirectly.
-- Extended the runtime-action regression to fail if reload or prepare status snapshots stop carrying the new inference readiness field.
-- Started coordinated background inference warm-up during shared runtime initialization and reused the same warm-up task from explicit prepare flows so fresh runtime bootstrap no longer leaves provider warm-up entirely on the first live turn.
-- Extended the hybrid regression to assert `/api/system/status` reports `Warming` while background provider warm-up is in flight and `Ready` after the shared warm-up task settles.
-- Added provider-stage inference timing metrics to the backend system snapshot and React activity view so operator status now shows the latest warm-up time and last live provider-call time separately.
-- Populated the remaining shell chrome navigation pages so `Docs`, `Support`, `Settings`, `Profile`, `Terms`, `Privacy`, and `API Docs` now render inside the control room with operator-facing content instead of acting as placeholders.
-- Replaced hash-based view switching with router-managed browser paths so the control room now resolves as real URLs such as `/chat`, `/command-center`, `/posture`, and `/activity`.
-- Added an immediate cold-path chat-stream initialization snapshot so streamed chat shows progress before shared runtime initialization finishes.
-- Extended the hybrid regression to fail if a fresh `/api/chat/stream` request stops emitting the expected initialization snapshot first.
-- Measured the real localhost chat-stream path against uvicorn and confirmed the first snapshot now arrives quickly over HTTP, not just through the in-process ASGI transport.
-- Re-measured the fresh localhost `/api/chat/stream` path after background inference warm-up landed and saw the first snapshot arrive in about `7.1ms`, while total completion still took about `7974.9ms`, so active-provider latency remains the main Phase 3 first-turn bottleneck.
-- Deferred the initial search refresh when a cached local search store is already present, then moved that refresh to the post-turn path so cached search availability stays immediate without re-indexing during cold runtime bootstrap.
-- Re-measured the fresh localhost `/api/chat/stream` path after adding provider timing metrics and cached-index search-refresh deferral and saw the first snapshot still arrive in about `6.1ms`, while total completion took about `13259.9ms`; `inference_metrics` showed `last_warmup_milliseconds=441.6` and `last_completion_milliseconds=12819.3`, which confirmed the live provider call remained the dominant first-turn cost in that run.
-- Added a persistent degraded inference state so failed live provider requests remain operator-visible in runtime readiness instead of reverting to generic cold status.
-- Streamed remote provider response text through `/api/chat/stream`, added disconnect-aware cancellation so abandoned browser turns stop the upstream provider request and skip partial-response persistence, and surfaced `first_response_token_milliseconds` beside the warm-up and full-completion timings.
-- Added a direct backend chat-route regression for disconnect cancellation so the `request.is_disconnected` path is now covered without waiting on the broader hybrid workflow.
-- Re-measured the real localhost `/api/chat/stream` path after the streamed-provider update and saw the first snapshot arrive in about `5.3ms`, first non-status assistant content in about `3204.8ms`, and total completion in about `3377.9ms`; `/api/system/status` reported `first_response_token_milliseconds=2596.6` and `last_completion_milliseconds=2764.3`, which indicates the remaining Phase 3 bottleneck is provider first-token latency rather than completion throughput.
-- Compacted provider-facing tool schemas and added a lightweight direct-answer path that omits tool schemas and prior chat history for explicit no-tool prompts such as `Reply with exactly OK. Do not call tools.`; a local payload check reduced the serialized provider request from about `10335` characters with full schemas to about `7914` with compact schemas, and down to about `189` for the explicit lightweight direct-answer path.
-- Re-measured the explicit lightweight direct-answer localhost path after the payload reduction and still saw high provider variance, with the first snapshot arriving in about `6.2ms`, `first_response_token_milliseconds=7965.6`, and `last_completion_milliseconds=8045.3`, which confirms the next Phase 3 bottleneck remains remote provider first-token latency rather than local request assembly.
-- Added provider-payload observability to `/api/system/status`, including the last first-round provider message count, history message count, tool schema count, serialized payload size, and whether the lightweight payload strategy was used, and surfaced those fields in the React Activity view beside the timing metrics.
-- Added a narrow local exact-answer fast path plus a short-lived repeated direct-answer response cache, so simple exact-response prompts and repeated identical no-tool direct-answer prompts can now return locally with `local_fast_path` or `local_response_cache` status metrics instead of waiting on a fresh provider response.
-- Extended the hybrid regression suite with a focused repeated direct-answer cache check and then formally closed Phase 3 after the embedding-cache, latency, warm-up, watcher-scope, and direct-answer fast-path exit criteria remained backed by executable validation.
-- Completed the separate MCP improvement backlog by modularizing MCP contracts/runtime/tool execution, surfacing typed MCP operator state and recent execution visibility, adding discovery-only refresh with cached-inventory fallback, and validating the path with fake-server integration tests plus operator documentation.
+The hybrid migration is effectively complete. The React control room is the primary interface, the CLI remains the supported fallback/operator surface, and the shared runtime owns the behavior used by both.
+
+This document now serves as a current-state record rather than an active implementation roadmap.
+
+## Completed Migration Outcomes
+
+- Shared runtime lifecycle lives in `core/app_runtime.py`.
+- Shared chat, mission, and CLI command orchestration live in `core/chat_service.py`, `core/mission_service.py`, and `core/cli_commands.py`.
+- FastAPI backend routes and service layers are in place under `backend/`.
+- React + Vite control-room views are in place under `frontend/`.
+- Chat, mission, reload, and prepare flows all stream progressive browser updates.
+- Browser pages now cover the main operator surfaces plus documentation and policy pages.
+- The browser supports session restore, session attachments, runtime verification, runtime preparation, and MCP inspection/configuration.
+- MCP runtime handling, discovery refresh, and typed status reporting are complete enough to be treated as active features rather than migration work.
 
 ## Current Architecture
 
-- Shared runtime layer: `core/app_runtime.py` initializes memory, tools, LLM routing, and background search/inference warm-up once for both the CLI and backend callers.
-- Shared runtime layer: `core/app_runtime.py` initializes memory, tools, LLM routing, and background search/inference warm-up once for both the CLI and backend callers, while deferring the heavy initial cached-index refresh until after the first completed turn.
-- Backend bridge: FastAPI under `backend/` exposes system, runtime, session, chat, mission, and command-center routes over that shared runtime.
-- Primary web interface: React + Vite under `frontend/`, with router-managed `/chat`, `/command-center`, `/posture`, and `/activity` paths.
-- Fallback interface: `main.py` still provides the terminal CLI, backed by the same chat, mission, memory, and runtime services.
+- Shared runtime: `core/app_runtime.py` initializes memory, tools, search, and provider state once for all callers.
+- Backend bridge: `backend/` exposes system, runtime, session, chat, mission, command-center, and docs routes.
+- Primary interface: `frontend/` renders the browser operator surfaces on router-managed paths.
+- Fallback interface: `main.py` keeps the terminal workflow available on the same runtime stack.
 
-## Current Control Room Surface
+## Current Control-Room Surface
 
-- Chat: streamed chat turns with an immediate cold-start initialization snapshot, cumulative provider-response text when the active remote provider streams, disconnect-safe cancellation, streamed mission progress, session restore, new-session creation, code-block rendering, and copy-reply actions.
-- Command Center: command map, tool catalog, typed MCP overview with discovery freshness, degraded reasons, recent MCP execution results, MCP-only refresh, durable-memory visibility, and browser-side `/verify` output.
-- Posture: runtime trust signals, privacy posture, and durable-memory transparency.
-- Activity: execution mode banner, startup guidance, separate inference/search readiness, provider-stage timing metrics including `first_response_token_milliseconds`, live reload/prepare activity, and runtime preparation output.
-- Shell pages: docs, support, settings, profile, terms, privacy, and API docs now live inside the same router-managed shell as the main operator views.
+- `Chat`: streamed chat, streamed missions, slash commands, session restore, session attachments, code-block rendering, copy reply.
+- `Command Center`: command map, tool inventory, MCP overview, MCP apply/refresh, durable memory, verification output.
+- `Posture`: privacy posture, trust signals, durable-memory transparency.
+- `Activity`: startup guidance, execution mode, inference/search readiness, timing metrics, payload metrics, live runtime activity log.
+- Auxiliary pages: docs, glossary, support, settings, profile, terms, privacy, API docs.
 
-## Current API Surface
+## Validation Baseline
 
-- `GET /api/system/health`
-- `GET /api/system/status`
-- `POST /api/runtime/reload` and `POST /api/runtime/reload/stream`
-- `POST /api/runtime/prepare` and `POST /api/runtime/prepare/stream`
-- `POST /api/sessions` and `GET /api/sessions/{session_id}/messages`
-- `POST /api/chat/turn` and `POST /api/chat/stream`
-- `POST /api/missions/turn` and `POST /api/missions/stream`
-- `GET /api/command-center/overview`, `POST /api/command-center/mcp/refresh`, and `POST /api/command-center/verify`
+The current codebase has dedicated validation entry points for the migrated workflow:
 
-## Phase Roadmap
+- `npm run build:frontend`
+- `npm run verify:command-center`
+- `npm run verify:hybrid`
+- focused unit tests in `tests/` for runtime, chat streaming, command center, documentation routes, and MCP behavior
 
-### Phase 0: Stabilize The Current Hybrid Foundation
+## Current Caveats
 
-Status: Completed
+- The browser verification flow intentionally times out long eval runs after 45 seconds; CLI `/verify` remains the fallback for longer verification passes.
+- Session attachments currently require extractable text content and enforce a 10 MB per-file limit.
+- The backend is designed for localhost use and does not ship with a built-in authentication layer.
+- Live provider latency, especially remote first-token latency, can still dominate first-turn completion time even though shared runtime bootstrap is much faster than before.
 
-Goals:
+## Historical Note
 
-- Keep the current backend and frontend contracts stable.
-- Finish the last interrupted live validation path.
-- Make the dev workflow predictable while the codebase is still moving.
-
-Exit criteria:
-
-- `npm --prefix frontend run build` passes.
-- Focused backend validation passes.
-- `Verify runtime` completes cleanly in the browser without a WatchFiles interruption.
-
-### Phase 1: Reach Functional CLI Parity In The Web App
-
-Status: Completed
-
-Goals:
-
-- Ensure every meaningful CLI command has a web equivalent unless it is intentionally terminal-only.
-- Keep all web actions backed by shared runtime services, not duplicate frontend-only logic.
-- Close any remaining legacy web-only control gaps that should exist in the React interface.
-
-Exit criteria:
-
-- React covers chat, missions, memory, skills, MCP status, verification, runtime actions, and session management.
-- Remaining exceptions are explicitly documented, such as `/quit`.
-- No critical user-facing workflow requires the CLI unless it is intentionally operator-only.
-
-### Phase 2: Improve The Two-Brain Experience
-
-Status: Completed
-
-Goals:
-
-- Make the Python brain responsible for execution, orchestration, memory, tools, and validation.
-- Make the React brain responsible for visibility, control, progressive feedback, and operator workflow.
-- Stream long-running actions so the web UI feels as responsive as the CLI.
-
-Exit criteria:
-
-- Mission execution has progressive feedback similar to chat SSE.
-- The React interface exposes runtime progress instead of waiting on full request completion.
-- The web UI is credible as the primary operator surface.
-
-### Phase 3: Performance And Operational Readiness
-
-Status: Completed
-
-Goals:
-
-- Reduce cold-start latency.
-- Make model and search initialization more predictable.
-- Prepare the hybrid app for longer-running everyday use.
-
-Exit criteria:
-
-- Local embedding assets are cached or prefetched.
-- First interaction latency is materially lower.
-- Development and validation flows are less sensitive to incidental file changes.
-
-## Implementation Checklist
-
-### Completed
-
-- [x] Extract shared runtime lifecycle.
-- [x] Share chat orchestration across CLI and backend.
-- [x] Share mission orchestration across CLI and backend.
-- [x] Add FastAPI backend routes and service layers.
-- [x] Add React frontend with typed API hooks.
-- [x] Add session restore and persisted session history.
-- [x] Add SSE streaming chat in the React workspace.
-- [x] Add runtime controls in the web UI.
-- [x] Add command-center endpoints and UI for CLI-equivalent inspection features.
-- [x] Add web-triggered mission execution.
-- [x] Add a unified hybrid dev run command.
-- [x] Clean the remaining skill import failures and tool-inventory pollution.
-- [x] Audit the remaining legacy web header controls and migrate the last missing web-mode banner.
-- [x] Add and pass a repeatable command-center inventory regression check.
-- [x] Stream mission progress over SSE in the React workspace.
-- [x] Add shared embedding-model cache preparation and persist indexer fallback downloads locally.
-- [x] Reduce search warmup on the critical startup path.
-- [x] Make React the primary interface and document the CLI as the fallback surface.
-- [x] Add and pass a repeatable hybrid regression suite.
-- [x] Narrow the watcher-driven backend reload scope to backend-relevant paths and restore the shared runtime config module.
-- [x] Add a self-healing rebuild path for the local search indexes and refresh the current vector store.
-- [x] Make explicit prepare flows settle deferred search warm-up before returning their final status.
-- [x] Restore incremental auto-indexing in standard installs by declaring the missing `watchdog` dependency.
-- [x] Warm the active inference provider and finish the initial search refresh during explicit prepare flows.
-- [x] Surface inference-runtime readiness separately from search-runtime readiness in the control room.
-- [x] Reduce cold streamed-chat first-snapshot latency with an immediate runtime-initialization snapshot.
-- [x] Persist failed live provider requests as degraded inference readiness for operator visibility.
-- [x] Start background inference warm-up during shared runtime initialization and reuse that warm-up task from explicit prepare flows.
-
-### Phase 3 Closeout
-
-- [x] Completed the remaining Phase 3 latency and operational-readiness work by trimming direct-answer payloads, short-circuiting narrow exact-answer prompts locally, reusing repeated identical direct-answer responses through a short-lived cache, and extending the hybrid regression suite to verify those paths.
-
-### Recently Completed
-
-- [x] Landed the MCP hardening and modularization backlog tracked in `MCP_features_status.md`, including typed MCP contracts, dedicated runtime ownership, tool-execution separation, and typed MCP result preservation through `ToolEngine`.
-- [x] Expanded command-center MCP visibility with typed server state, error kind, failing tool name, discovery freshness, degraded reason, recent MCP execution results, and a discovery-only `Refresh MCP` control.
-- [x] Added fake-server MCP integration coverage for cached discovery refresh fallback, execution failure recovery, reconnect-on-execute behavior, and duplicate discovered tool-name handling.
-- [x] Added operator-facing MCP documentation in `README.md` and `DASHBOARD.md`, covering configuration, cached-inventory fallback behavior, refresh usage, and troubleshooting.
-- [x] Added `LocalIndexer.rebuild_indexes()` plus dimension-drift detection so stale Chroma collections can be recreated instead of staying stuck on grep fallback.
-- [x] Rebuilt the local search stores from scratch and indexed `117` current files into a `373`-document semantic collection.
-- [x] Confirmed the runtime-bound `search_personal_data` tool returns hybrid semantic results again for `runtime bootstrap` instead of grep-only fallback formatting.
-- [x] Measured the current hybrid first-interaction path in-process and confirmed cold bootstrap, not post-init chat bookkeeping, was the remaining local latency bottleneck.
-- [x] Skipped the Claude-Mem worker socket probe when external subprocess integrations are disabled.
-- [x] Deferred `LLMRouter` HTTP client creation until the first actual HTTP-backed inference call.
-- [x] Confirmed the measured cold runtime bootstrap dropped from about `484.5ms` to about `27.1ms`, while post-init chat orchestration stayed about `10.5ms`.
-- [x] Re-ran `python verify_hybrid_workflow.py` successfully after the latency changes.
-- [x] Rebuilt `config.py` from the current runtime surface after a placeholder file blocked backend imports and the shared hybrid validation path.
-- [x] Switched the watcher-driven backend launcher from broad repo watching to a `watchfiles` path set covering `backend/`, `core/`, `skills/`, and the root `config.py`.
-- [x] Confirmed `python verify_hybrid_workflow.py` passes again after the config recovery and narrowed backend watch scope.
-- [x] Re-ran the browser path for `Verify runtime` in a stable no-reload setup.
-- [x] Confirmed `POST /api/command-center/verify` returns `200 OK` from the backend.
-- [x] Confirmed the React verification panel renders a completed result state instead of hanging.
-- [x] Confirmed the real `SkillLoader.load()` path registers `search_web` and `merge_python_files` without import-time failures.
-- [x] Confirmed imported helpers such as `dataclass` no longer leak into the tool inventory.
-- [x] Migrated the remaining web-mode execution warning into the React shell.
-- [x] Added `python verify_command_center_inventory.py` and verified the command-center inventory stayed stable across reload and fresh-session transitions.
-- [x] Added `/api/missions/stream` and wired the React mission action to progressive SSE snapshots.
-- [x] Confirmed the mission stream service yields an immediate progress snapshot before runtime initialization completes.
-- [x] Confirmed the mission streaming frontend changes pass `npm --prefix frontend run build`.
-- [x] Added startup guidance and `/prepare` support for the local embedding-model cache.
-- [x] Confirmed the embedding cache helper flips startup guidance off once the local model marker exists.
-- [x] Deferred `AppRuntime` search bootstrap so `ensure_runtime_ready()` returns before semantic search finishes warming.
-- [x] Lazy-loaded the retriever embedding-model path so `ensure_search_runtime()` dropped from about `10.4s` to about `0.75s` in real measurement.
-- [x] Switched `run.bat` to the hybrid React launcher and added `run-cli.bat` as the explicit CLI fallback surface.
-- [x] Updated setup and README so the primary interface expects Node/npm and installs frontend dependencies.
-- [x] Added `verify_hybrid_workflow.py`, `npm run verify:hybrid`, and `npm run dev:hybrid:stable`.
-- [x] Confirmed the regression suite passes for frontend build, primary watcher-driven launch, stable no-reload launch, command-center inventory, and mission SSE.
-- [x] Closed Phase 0 based on passing frontend build, focused backend validation, and stable browser verification of `Verify runtime`.
-- [x] Closed Phase 1 based on React coverage for chat, missions, memory, skills, MCP status, verification, runtime actions, and session management, with `/quit` retained as an intentional terminal-only exception.
-- [x] Added `/api/runtime/reload/stream` and `/api/runtime/prepare/stream` so runtime actions emit progressive updates instead of final-response-only JSON in the React path.
-- [x] Updated the React runtime controls to show a live runtime activity log for reload and prepare.
-- [x] Extended `verify_hybrid_workflow.py` so the hybrid regression suite now checks runtime action streams as well as mission SSE.
-- [x] Closed Phase 2 based on mission SSE, runtime progress streaming, and a passing hybrid regression suite that now covers both stream classes.
-- [x] Added `backend/dev_server.py` so the watcher-driven backend keeps its reload exclusions without relying on shell-expanded glob arguments.
-- [x] Confirmed `npm run verify:hybrid` still passes with the primary watcher-driven launcher after excluding per-skill script edits from backend process reload.
-- [x] Removed the retired legacy web surface so the hybrid web app is the only browser UI and the CLI is the only fallback path.
-- [x] Added browser-mediated approval for sensitive tools when safety confirmation is enabled in the hybrid frontend.
-- [x] Reorganized the React control room into the current Chat, Command Center, Posture, and Activity views behind router-managed navigation.
-- [x] Fixed the chat textarea input and placeholder contrast in the hybrid frontend.
-- [x] Updated CLI `/prepare` and the web `Prepare runtime` flow to wait for deferred search warm-up before returning the final status snapshot.
-- [x] Confirmed the focused prepare probe now returns `Ready (background re-index)` instead of `Warming (search runtime loading in background)`.
-- [x] Extended `verify_hybrid_workflow.py` so the runtime-action regression now asserts prepare reports search-runtime details and does not complete while `search_status` is still `Warming`.
-- [x] Added `watchdog` to `requirements.txt` so `setup.bat` and manual `pip install -r requirements.txt` flows install the filesystem watcher dependency used by `LocalIndexer`.
-- [x] Installed `watchdog` in the current venv and confirmed `from core.indexer import WATCHDOG_AVAILABLE` now returns `True`.
-- [x] Extended `verify_hybrid_workflow.py` so the launcher regression now asserts the root requirements file still declares `watchdog`.
-- [x] Measured the active OpenRouter path in-process and confirmed cold runtime init stayed about `45.8ms`, while the first real turn was about `2315.8ms` and a second warm turn was about `1511.6ms`.
-- [x] Confirmed a manual provider prewarm on a fresh runtime cut the first real turn to about `1557.1ms`, which isolated the remaining penalty to provider/search preparation rather than shared runtime bootstrap.
-- [x] Added active-provider warm-up through `LLMRouter.prepare_inference_runtime()` and exposed it through shared explicit prepare flows.
-- [x] Tracked the pending background search refresh in `AppRuntime` so explicit prepare now waits for the first refresh to finish instead of returning while indexing still competes with the first live turn.
-- [x] Re-ran the explicit CLI `/prepare` probe and measured about `11177.6ms` for the full prepare path, followed by a first live turn of about `1708.4ms` with `search_status` settled to `Ready (1 file(s) refreshed)`.
-- [x] Re-ran the focused runtime-action regression successfully after the prepare-path changes.
-- [x] Added `inference_status` to the backend system snapshot so runtime status now distinguishes provider readiness from search readiness.
-- [x] Confirmed the backend status snapshot moves from `Cold (OpenRouter: provider runtime not warmed)` after init to `Ready (OpenRouter: provider runtime warmed)` after explicit inference warm-up.
-- [x] Updated the React sidebar snapshot and Activity page to show separate inference and search readiness states.
-- [x] Confirmed `npm --prefix frontend run build` passes after the readiness-surface changes.
-- [x] Extended `verify_hybrid_workflow.py` so the focused runtime-action regression now asserts reload and prepare status payloads include `inference_status`.
-- [x] Added coordinated background inference warm-up ownership to `AppRuntime`, so shared runtime initialization starts provider warm-up immediately and explicit prepare now reuses the in-flight task instead of duplicating it.
-- [x] Added focused unit coverage in `tests/test_app_runtime.py` to assert runtime init starts inference warm-up and explicit prepare reuses the same task.
-- [x] Extended `verify_hybrid_workflow.py` with a focused inference warm-up regression that asserts `/api/system/status` reports `Warming` during background provider warm-up and `Ready` after the shared task completes.
-- [x] Added `inference_metrics` to the backend system snapshot and surfaced the latest warm-up and live provider-call timings in the React Activity page.
-- [x] Updated the cold `/api/chat/stream` path to yield `*🔄 Initializing shared runtime…*` before awaiting runtime readiness.
-- [x] Confirmed the first yielded chunk from `ChatSessionService.stream_turn()` now arrives immediately in-process (`~0.0ms`) with the new initialization snapshot content.
+The former phase-by-phase hybrid migration backlog has been retired. New work should be tracked as normal feature or maintenance work against the current browser-first architecture rather than as unfinished migration scope.
 - [x] Re-measured the cold in-process chat SSE path and saw the first snapshot move from about `4123.0ms` to about `2076.6ms`, now carrying the initialization snapshot instead of waiting for the later thinking update.
 - [x] Extended `verify_hybrid_workflow.py` with a focused chat-stream regression that asserts a fresh `/api/chat/stream` request emits the initialization snapshot first.
 - [x] Measured the cold localhost `/api/chat/stream` path against a real uvicorn backend on `127.0.0.1:8011` and saw the first snapshot arrive in about `318.1ms` with `*🔄 Initializing shared runtime…*`, while total completion remained about `4743.5ms` on the active provider path.

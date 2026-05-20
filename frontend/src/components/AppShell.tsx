@@ -25,6 +25,7 @@ export type AppView =
   | "posture"
   | "activity"
   | "docs"
+  | "features"
   | "glossary"
   | "support"
   | "settings"
@@ -172,6 +173,7 @@ export function AppShell({
       icon: Fingerprint,
     },
   ];
+  const docsActive = activeView === "docs" || activeView === "features";
 
   return (
     <div className="min-h-screen bg-background text-primary">
@@ -207,8 +209,8 @@ export function AppShell({
         <div className="mt-auto border-t border-border-subtle pt-space-md">
           <button
             type="button"
-            onClick={() => onViewChange("docs")}
-            className={chromeButtonClasses(activeView === "docs")}
+            onClick={() => onViewChange("features")}
+            className={chromeButtonClasses(docsActive)}
           >
             <BookOpen className="h-4 w-4" />
             Docs
@@ -311,7 +313,7 @@ export function AppShell({
               μZephyr v{status?.version ?? "0.1.0"} | {status?.runtime_initialized ? "SYSTEM_READY" : "INITIALIZING"}
             </div>
             <div className="flex flex-wrap items-center gap-space-md">
-              <button type="button" onClick={() => onViewChange("docs")} className={footerButtonClasses(activeView === "docs")}>Docs</button>
+              <button type="button" onClick={() => onViewChange("features")} className={footerButtonClasses(docsActive)}>Docs</button>
               <button type="button" onClick={() => onViewChange("glossary")} className={footerButtonClasses(activeView === "glossary")}>Glossary</button>
               <button type="button" onClick={() => onViewChange("support")} className={footerButtonClasses(activeView === "support")}>Support</button>
               <button type="button" onClick={() => onViewChange("terms")} className={footerButtonClasses(activeView === "terms")}>Terms</button>

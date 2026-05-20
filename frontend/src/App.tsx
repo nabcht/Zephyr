@@ -11,6 +11,7 @@ import { CommandCenterPage } from "./views/CommandCenterPage";
 import {
   ApiDocsPage,
   DocsPage,
+  FeaturesPage,
   GlossaryPage,
   PrivacyPage,
   ProfilePage,
@@ -34,6 +35,8 @@ function resolveViewFromPath(pathname: string): AppView | null {
       return "chat";
     case "/docs":
       return "docs";
+    case "/features":
+      return "features";
     case "/glossary":
       return "glossary";
     case "/support":
@@ -65,6 +68,8 @@ function pathForView(view: AppView): string {
       return "/chat";
     case "docs":
       return "/docs";
+    case "features":
+      return "/features";
     case "glossary":
       return "/glossary";
     case "support":
@@ -109,15 +114,18 @@ export default function App() {
   const {
     overview,
     verification,
+    memoryRepair,
     error: commandCenterError,
     isLoading: isCommandCenterLoading,
     isRefreshingMcp,
     isApplyingMcp,
     isVerifying,
+    isRepairingMemory,
     refresh: refreshCommandCenter,
     refreshMcpDiscovery,
     applyMcpConfiguration,
     verifyRuntime,
+    repairMemoryBrain,
   } = useCommandCenter();
   const {
     sessionId,
@@ -205,6 +213,9 @@ export default function App() {
     case "docs":
       pageContent = <DocsPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
       break;
+    case "features":
+      pageContent = <FeaturesPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
+      break;
     case "glossary":
       pageContent = <GlossaryPage status={status} sessionId={sessionId} onNavigate={handleViewChange} />;
       break;
@@ -216,15 +227,18 @@ export default function App() {
         <CommandCenterPage
           overview={overview}
           verification={verification}
+          memoryRepair={memoryRepair}
           error={commandCenterError}
           isLoading={isCommandCenterLoading}
           isRefreshingMcp={isRefreshingMcp}
           isApplyingMcp={isApplyingMcp}
           isVerifying={isVerifying}
+          isRepairingMemory={isRepairingMemory}
           onRefresh={refreshCommandCenter}
           onRefreshMcp={refreshMcpDiscovery}
           onApplyMcp={applyMcpConfiguration}
           onVerify={verifyRuntime}
+          onRepairMemory={repairMemoryBrain}
         />
       );
       break;

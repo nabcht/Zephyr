@@ -13,7 +13,7 @@ from core.mcp_contracts import MCPServerSettings, MCPServerStatus, MCPToolSpec
 if TYPE_CHECKING:
     from core.memory import MemoryManager
 
-log = logging.getLogger("uzephyr.mcp_runtime")
+log = logging.getLogger("zephyr.mcp_runtime")
 
 
 @dataclass(slots=True)

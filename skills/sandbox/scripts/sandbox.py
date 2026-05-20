@@ -410,7 +410,7 @@ async def run_test_in_sandbox(
         pass 
 
     try:
-        with tempfile.TemporaryDirectory(prefix="uzephyr-sandbox-") as sandbox_dir:
+        with tempfile.TemporaryDirectory(prefix="zephyr-sandbox-") as sandbox_dir:
             sandbox_root = Path(sandbox_dir)
             workspace_dir = sandbox_root / "workspace"
             script_path = workspace_dir / "sandbox_test.py"

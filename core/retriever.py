@@ -12,7 +12,7 @@ from typing import Any
 import config
 from core import linker
 
-log = logging.getLogger("uzephyr.retriever")
+log = logging.getLogger("zephyr.retriever")
 
 
 @dataclass

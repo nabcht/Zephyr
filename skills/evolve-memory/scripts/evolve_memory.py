@@ -29,7 +29,7 @@ from core.truth_synthesis import (
     remove_recent_contradictions as _remove_recent_contradictions,
 )
 
-log = logging.getLogger("uzephyr.skills.evolve_memory")
+log = logging.getLogger("zephyr.skills.evolve_memory")
 
 _SYNTHESIS_TEMPLATE = """\
 You are a memory synthesizer for a personal AI assistant.
@@ -149,8 +149,8 @@ async def _openai_compat_generate(prompt: str, provider: str) -> str:
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {config.OPENROUTER_API_KEY}",
-            "HTTP-Referer": "https://github.com/uzephyr",
-            "X-Title": "uZephyr",
+                "HTTP-Referer": "https://github.com/nabcht",
+            "X-Title": "Zephyr",
         }
         model = config.OPENROUTER_MODEL
 

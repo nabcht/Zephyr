@@ -14,7 +14,7 @@ from core.mcp_contracts import MCPToolResult
 from rich.console import Console
 from rich.prompt import Confirm
 
-log = logging.getLogger("uzephyr.tool_executor")
+log = logging.getLogger("zephyr.tool_executor")
 
 
 class RegisteredTool(Protocol):

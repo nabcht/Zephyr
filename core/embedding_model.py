@@ -11,7 +11,7 @@ from typing import Any
 import config
 
 
-log = logging.getLogger("uzephyr.embedding_model")
+log = logging.getLogger("zephyr.embedding_model")
 _EMBEDDING_MODEL_MARKER = "modules.json"
 
 

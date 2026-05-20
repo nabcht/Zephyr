@@ -13,7 +13,7 @@ from typing import Any
 
 import config
 
-log = logging.getLogger("uzephyr.claude_mem_worker")
+log = logging.getLogger("zephyr.claude_mem_worker")
 
 _worker_process: subprocess.Popen[str] | None = None
 
